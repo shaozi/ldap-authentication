@@ -1,0 +1,26 @@
+{
+  "name": "ldap-auth",
+  "version": "1.0.0",
+  "description": "Ldap authentication for a user",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/shaozi/ldap-auth.git"
+  },
+  "keywords": [
+    "ldap",
+    "authentication"
+  ],
+  "author": "Jingshao Chen",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/shaozi/ldap-auth/issues"
+  },
+  "homepage": "https://github.com/shaozi/ldap-auth#readme",
+  "dependencies": {
+    "ldapjs": "^1.0.2"
+  }
+}
