@@ -15,15 +15,28 @@ This library use `ldapjs` as the underneath library. It has two modes of authent
 
 * Can use an admin to search and authenticate a user
 * Can also use a regular user and authenticate the user itself
-* Supports ldap STARTTLS
+* Supports ldap, ldaps, and STARTTLS
+* Async/Await Promise
 
 ## How to Use
 
-See `example` folder for details.
+### Installation
+
+```sh
+npm install ldap-authentication --save
+```
+
+### Simple example
+
+```javascript
+let user = await authenticate(options)
+```
+
+### Complete example
 
 ```javascript
 
-const { authenticate } = require('ldap-auth')
+const { authenticate } = require('ldap-authentication')
 
 async function (auth() {
 

@@ -1,5 +1,5 @@
 {
-  "name": "ldap-auth",
+  "name": "ldap-authentication",
   "version": "1.0.0",
   "description": "Ldap authentication for a user",
   "main": "index.js",
