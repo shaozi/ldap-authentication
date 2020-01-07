@@ -8,7 +8,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/shaozi/ldap-auth.git"
+    "url": "https://github.com/shaozi/ldap-authentication.git"
   },
   "keywords": [
     "ldap",
@@ -17,9 +17,9 @@
   "author": "Jingshao Chen",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/shaozi/ldap-auth/issues"
+    "url": "https://github.com/shaozi/ldap-authentication/issues"
   },
-  "homepage": "https://github.com/shaozi/ldap-auth#readme",
+  "homepage": "https://github.com/shaozi/ldap-authentication#readme",
   "dependencies": {
     "ldapjs": "^1.0.2"
   }
