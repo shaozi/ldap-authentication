@@ -38,7 +38,7 @@ let user = await authenticate(options)
 
 const { authenticate } = require('ldap-authentication')
 
-async function (auth() {
+async function auth() {
 
   // auth with admin
   let options = {
