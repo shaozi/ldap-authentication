@@ -10,7 +10,8 @@ describe('ldap-authentication test', () => {
         adminPassword: 'password',
         userPassword: 'password',
         userSearchBase: 'dc=example,dc=com',
-        userSearchFilter: '(uid=gauss)'
+        usernameAttribute: 'uid',
+        username: 'gauss'
       }
       let user = await authenticate(options)
       expect(user).toBeTruthy()
@@ -24,7 +25,8 @@ describe('ldap-authentication test', () => {
         userDn: 'uid=einstein,dc=example,dc=com',
         userPassword: 'password',
         userSearchBase: 'dc=example,dc=com',
-        userSearchFilter: '(uid=gauss)'
+        usernameAttribute: 'uid',
+        username: 'gauss'
       }
       let user = await authenticate(options)
       expect(user).toBeTruthy()
@@ -42,7 +44,8 @@ describe('ldap-authentication negative test', () => {
       adminPassword: 'password',
       userPassword: 'password',
       userSearchBase: 'dc=example,dc=com',
-      userSearchFilter: '(uid=gauss)'
+      usernameAttribute: 'uid',
+      username: 'gauss'
     }
     let e = null
     try {
@@ -58,10 +61,11 @@ describe('ldap-authentication negative test', () => {
         url: 'ldap://ldap.forumsys.com'
       },
       adminDn: 'cn=read-only-admin,dc=example,dc=com',
-      adminPassword: 'wrongpassword',
+      adminPassword: '',
       userPassword: 'password',
       userSearchBase: 'dc=example,dc=com',
-      userSearchFilter: '(uid=gauss)'
+      usernameAttribute: 'uid',
+      username: 'gauss'
     }
     let e = null
     try {
@@ -80,7 +84,8 @@ describe('ldap-authentication negative test', () => {
       adminPassword: 'password',
       userPassword: 'password',
       userSearchBase: 'dc=example,dc=com',
-      userSearchFilter: '(uid=not-exist)'
+      usernameAttribute: 'uid',
+      username: 'wrong'
     }
     let e = null
     try {
@@ -99,7 +104,8 @@ describe('ldap-authentication negative test', () => {
       adminPassword: 'password',
       userPassword: 'wrongpassword',
       userSearchBase: 'dc=example,dc=com',
-      userSearchFilter: '(uid=gauss)'
+      usernameAttribute: 'uid',
+      username: 'gauss'
     }
     let e = null
     try {
@@ -117,7 +123,8 @@ describe('ldap-authentication negative test', () => {
       userDn: 'cn=not-exist,dc=example,dc=com',
       userPassword: 'password',
       userSearchBase: 'dc=example,dc=com',
-      userSearchFilter: '(uid=gauss)'
+      usernameAttribute: 'uid',
+      username: 'gauss'
     }
     let e = null
     try {
@@ -135,7 +142,8 @@ describe('ldap-authentication negative test', () => {
       userDn: 'cn=gauss,dc=example,dc=com',
       userPassword: 'wrongpassword',
       userSearchBase: 'dc=example,dc=com',
-      userSearchFilter: '(uid=gauss)'
+      usernameAttribute: 'uid',
+      username: 'gauss'
     }
     let e = null
     try {

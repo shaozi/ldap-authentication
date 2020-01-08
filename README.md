@@ -85,8 +85,14 @@ auth()
   * `tlsOptions`: options to pass to node tls. Example: `{ rejectUnauthorized: false }`
 * `adminDn`: The DN of the admistrator. Example: 'cn=read-only-admin,dc=example,dc=com',
 * `adminPassword`: The password of the admin.
-* `userDn`: The DN of the user to be authenticated. This is only needed if `adminDn` and `adminPassword` are not provided. Example: `uid=gauss,dc=example,dc=com`
+* `userDn`: The DN of the user to be authenticated. This is only needed if `adminDn` and `adminPassword` are not provided.
+            Example: `uid=gauss,dc=example,dc=com`
 * `userPassword`: The password of the user,
 * `userSearchBase`: The ldap base DN to search the user. Example: `dc=example,dc=com`
-* `userSearchFilter`: The ldap search string to get user's detail information. Example: `(uid=gauss)`'
+* `usernameAttribute`: The ldap search equality attribute name corresponding to the user's username.
+                       It will be used with the value in `username` to construct an ldap filter as `({attribute}={username})`
+                       to find the user and get user details in LDAP. Example: `uid`
+* `username`: The username to authenticate with. It is used together with the name in `usernameAttribute` 
+              to construct an ldap filter as `({attribute}={username})`
+              to find the user and get user details in LDAP. Example: `some user input`
 * `starttls`: Boolean. Use `STARTTLS` or not
