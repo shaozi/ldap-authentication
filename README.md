@@ -50,7 +50,7 @@ async function auth() {
     adminPassword: 'password',
     userPassword: 'password',
     userSearchBase: 'dc=example,dc=com',
-    userSearchString: '(uid=gauss)',
+    userSearchFilter: '(uid=gauss)',
     // starttls: false
   }
   
@@ -66,7 +66,7 @@ async function auth() {
     userDn: 'uid=einstein,dc=example,dc=com',
     userPassword: 'password',
     userSearchBase: 'dc=example,dc=com',
-    userSearchString: '(uid=einstein)',
+    userSearchFilter: '(uid=einstein)',
     // starttls: false
   }
 
@@ -88,5 +88,5 @@ auth()
 * `userDn`: The DN of the user to be authenticated. This is only needed if `adminDn` and `adminPassword` are not provided. Example: `uid=gauss,dc=example,dc=com`
 * `userPassword`: The password of the user,
 * `userSearchBase`: The ldap base DN to search the user. Example: `dc=example,dc=com`
-* `userSearchString`: The ldap search string to get user's detail information. Example: `(uid=gauss)`'
+* `userSearchFilter`: The ldap search string to get user's detail information. Example: `(uid=gauss)`'
 * `starttls`: Boolean. Use `STARTTLS` or not

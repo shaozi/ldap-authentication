@@ -72,12 +72,12 @@ async function _searchUser(ldapClient, searchBase, usernameFilter) {
   })
 }
 
-async function authenticateWithAdmin(adminDn, adminPassword, userSearchBase, userSearchString, userPassword, starttls, ldapOpts) {
+async function authenticateWithAdmin(adminDn, adminPassword, userSearchBase, userSearchFilter, userPassword, starttls, ldapOpts) {
   var ldapAdminClient = await _ldapBind(adminDn, adminPassword, starttls, ldapOpts)
-  var user = await _searchUser(ldapAdminClient, userSearchBase, userSearchString)
+  var user = await _searchUser(ldapAdminClient, userSearchBase, userSearchFilter)
   ldapAdminClient.unbind()
   if (!user || !user.dn) {
-    throw new Error('user not found or userSearchString is wrong')
+    throw new Error('user not found or userSearchFilter is wrong')
   }
   var userDn = user.dn
   let ldapUserClient = await _ldapBind(userDn, userPassword, starttls, ldapOpts)
@@ -85,11 +85,11 @@ async function authenticateWithAdmin(adminDn, adminPassword, userSearchBase, use
   return user
 }
 
-async function authenticateWithUser(userDn, userSearchBase, userSearchString, userPassword, starttls, ldapOpts) {
+async function authenticateWithUser(userDn, userSearchBase, userSearchFilter, userPassword, starttls, ldapOpts) {
   let ldapUserClient = await _ldapBind(userDn, userPassword, starttls, ldapOpts)
-  var user = await _searchUser(ldapUserClient, userSearchBase, userSearchString)
+  var user = await _searchUser(ldapUserClient, userSearchBase, userSearchFilter)
   if (!user || !user.dn) {
-    throw new Error('user not found')
+    throw new Error('user logged in, but user details could not be found. Probabaly userSearchFilter is wrong?')
   }
   ldapUserClient.unbind()
   return user
@@ -97,7 +97,7 @@ async function authenticateWithUser(userDn, userSearchBase, userSearchString, us
 
 async function authenticate(options) {
   assert(options.userSearchBase, 'userSearchBase must be provided')
-  assert(options.userSearchString, 'userSearchString must be provided')
+  assert(options.userSearchFilter, 'userSearchFilter must be provided')
   assert(options.userPassword, 'userPassword must be provided')
   assert(options.ldapOpts && options.ldapOpts.url, 'ldapOpts.url must be provided')
   if (options.adminDn) {
@@ -106,7 +106,7 @@ async function authenticate(options) {
       options.adminDn,
       options.adminPassword,
       options.userSearchBase,
-      options.userSearchString,
+      options.userSearchFilter,
       options.userPassword,
       options.starttls,
       options.ldapOpts
@@ -116,7 +116,7 @@ async function authenticate(options) {
   return await authenticateWithUser(
     options.userDn,
     options.userSearchBase,
-    options.userSearchString,
+    options.userSearchFilter,
     options.userPassword,
     options.starttls,
     options.ldapOpts

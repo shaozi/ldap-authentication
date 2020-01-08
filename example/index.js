@@ -12,7 +12,7 @@ async function auth() {
     adminPassword: 'password',
     userPassword: 'password',
     userSearchBase: 'dc=example,dc=com',
-    userSearchString: '(uid=gauss)',
+    userSearchFilter: '(uid=gauss)',
     // starttls: false
   }
   
@@ -28,7 +28,7 @@ async function auth() {
     userDn: 'uid=einstein,dc=example,dc=com',
     userPassword: 'password',
     userSearchBase: 'dc=example,dc=com',
-    userSearchString: '(uid=einstein)',
+    userSearchFilter: '(uid=einstein)',
     // starttls: false
   }
 
