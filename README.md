@@ -31,7 +31,9 @@ npm install ldap-authentication --save
 
 ### Examples
 
-An example on how to use with Passport is [passport-ldap-example](https://github.com/shaozi/passport-ldap-example).
+* An example on how to use with Passport is [passport-ldap-example](https://github.com/shaozi/passport-ldap-example)
+
+* Another simple library [express-passport-ldap-mongoose](https://github.com/shaozi/express-passport-ldap-mongoose) provide turn key solution
 
 #### User authenticate without getting user details
 
