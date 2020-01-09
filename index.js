@@ -81,7 +81,8 @@ async function authenticateWithAdmin(adminDn, adminPassword, userSearchBase, use
   var user = await _searchUser(ldapAdminClient, userSearchBase, usernameAttribute, username)
   ldapAdminClient.unbind()
   if (!user || !user.dn) {
-    throw new Error('user not found or userSearchFilter is wrong')
+    ldapOpts.log && ldapOpts.log.trace(`admin did not find user! (${usernameAttribute}=${username})`)
+    throw new Error('user not found or usernameAttribute is wrong')
   }
   var userDn = user.dn
   let ldapUserClient = await _ldapBind(userDn, userPassword, starttls, ldapOpts)
@@ -91,18 +92,30 @@ async function authenticateWithAdmin(adminDn, adminPassword, userSearchBase, use
 
 async function authenticateWithUser(userDn, userSearchBase, usernameAttribute, username, userPassword, starttls, ldapOpts) {
   let ldapUserClient = await _ldapBind(userDn, userPassword, starttls, ldapOpts)
+  if (!usernameAttribute || !userSearchBase) {
+    // if usernameAttribute is not provided, no user detail is needed.
+    ldapUserClient.unbind()
+    return true
+  }
   var user = await _searchUser(ldapUserClient, userSearchBase, usernameAttribute, username)
   if (!user || !user.dn) {
-    throw new Error('user logged in, but user details could not be found. Probabaly userSearchFilter is wrong?')
+    ldapOpts.log && ldapOpts.log.trace(`user logged in, but user details could not be found. (${usernameAttribute}=${username}). Probabaly wrong attribute or searchBase?`)
+    throw new Error('user logged in, but user details could not be found. Probabaly usernameAttribute or userSearchBase is wrong?')
   }
   ldapUserClient.unbind()
   return user
 }
 
 async function authenticate(options) {
-  assert(options.userSearchBase, 'userSearchBase must be provided')
-  assert(options.usernameAttribute, 'userSearchFilter must be provided')
-  assert(options.username, 'userSearchFilter must be provided')
+  if (!options.userDn) {
+    assert(options.adminDn, 'Admin mode adminDn must be provided')
+    assert(options.adminPassword, 'Admin mode adminPassword must be provided')
+    assert(options.userSearchBase, 'Admin mode userSearchBase must be provided')
+    assert(options.usernameAttribute, 'Admin mode usernameAttribute must be provided')
+    assert(options.username, 'Admin mode username must be provided')
+  } else {
+    assert(options.userDn, 'User mode userDn must be provided')
+  }
   assert(options.userPassword, 'userPassword must be provided')
   assert(options.ldapOpts && options.ldapOpts.url, 'ldapOpts.url must be provided')
   if (options.adminDn) {

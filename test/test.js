@@ -26,11 +26,22 @@ describe('ldap-authentication test', () => {
         userPassword: 'password',
         userSearchBase: 'dc=example,dc=com',
         usernameAttribute: 'uid',
-        username: 'gauss'
+        username: 'einstein'
       }
       let user = await authenticate(options)
       expect(user).toBeTruthy()
-      expect(user.uid).toEqual('gauss')
+      expect(user.uid).toEqual('einstein')
+    })
+    test('Use an regular user to authenticate iteself without search', async () => {
+      let options = {
+        ldapOpts: {
+          url: 'ldap://ldap.forumsys.com'
+        },
+        userDn: 'uid=einstein,dc=example,dc=com',
+        userPassword: 'password'
+      }
+      let user = await authenticate(options)
+      expect(user).toBeTruthy()
     })
 })
 
@@ -146,6 +157,21 @@ describe('ldap-authentication negative test', () => {
       username: 'gauss'
     }
     let e = null
+    try {
+      await authenticate(options)
+    } catch(error) {
+      e = error
+    } 
+    expect(e).toBeTruthy()
+  })
+  test('Use an regular user to authenticate iteself without search with wrong password should fail', async () => {
+    let options = {
+      ldapOpts: {
+        url: 'ldap://ldap.forumsys.com'
+      },
+      userDn: 'uid=einstein,dc=example,dc=com',
+      userPassword: ''
+    }
     try {
       await authenticate(options)
     } catch(error) {
