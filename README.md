@@ -1,6 +1,7 @@
 # A Simple node Library that Authenticates a User Against an LDAP/AD Server
 
 [![Build Status](https://travis-ci.org/shaozi/ldap-authentication.svg?branch=master)](https://travis-ci.org/shaozi/ldap-authentication)
+[![Known Vulnerabilities](https://snyk.io/test/github/shaozi/ldap-authentication/badge.svg?targetFile=package.json)](https://snyk.io/test/github/shaozi/ldap-authentication?targetFile=package.json)
 
 This library use `ldapjs` as the underneath library. It has two modes of authentications:
 
