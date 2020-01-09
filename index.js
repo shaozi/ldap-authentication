@@ -8,12 +8,12 @@ function _ldapBind(dn, password, starttls, ldapOpts) {
     if (starttls) {
       client.starttls(ldapOpts.tlsOptions, null, function (error) {
         if (error) {
-          reject(error.message)
+          reject(error)
           return
         }
         client.bind(dn, password, function (err) {
           if (err) {
-            reject(err.message)
+            reject(err)
             client.unbind()
             return
           }
@@ -24,7 +24,7 @@ function _ldapBind(dn, password, starttls, ldapOpts) {
     } else {
       client.bind(dn, password, function (err) {
         if (err) {
-          reject(err.message)
+          reject(err)
           client.unbind()
           return
         }
@@ -48,7 +48,7 @@ async function _searchUser(ldapClient, searchBase, usernameAttribute, username) 
     }, function (err, res) {
       var user = null
       if (err) {
-        reject(err.message)
+        reject(err)
         ldapClient.unbind()
         return
       }
@@ -60,14 +60,13 @@ async function _searchUser(ldapClient, searchBase, usernameAttribute, username) 
       });
       res.on('error', function (err) {
         console.error('error: ' + err.message);
-        reject(err.message)
+        reject(err)
         ldapClient.unbind()
       });
       res.on('end', function (result) {
         if (result.status != 0) {
-          reject('search failed')
+          reject(new Error('ldap search status is not 0, search failed'))
         } else {
-          //console.error('status = 0' + result);
           resolve(user)
         }
         ldapClient.unbind()
