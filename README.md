@@ -1,5 +1,7 @@
 # A Simple node Library that Authenticates a User Against an LDAP/AD Server
 
+[![Build Status](https://travis-ci.org/shaozi/ldap-authentication.svg?branch=master)](https://travis-ci.org/shaozi/ldap-authentication)
+
 This library use `ldapjs` as the underneath library. It has two modes of authentications:
 
 1. **Admin authenticate mode**. If an admin user is provided, the library will login (ldap bind) with the admin user,
