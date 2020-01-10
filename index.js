@@ -39,7 +39,7 @@ function _ldapBind(dn, password, starttls, ldapOpts) {
 async function _searchUser(ldapClient, searchBase, usernameAttribute, username) {
   return new Promise(function (resolve, reject) {
     var filter = new ldap.filters.EqualityFilter({
-      attribute: usernameAttribute, 
+      attribute: usernameAttribute,
       value: username
     })
     ldapClient.search(searchBase, {
@@ -81,7 +81,7 @@ async function authenticateWithAdmin(adminDn, adminPassword, userSearchBase, use
   ldapAdminClient.unbind()
   if (!user || !user.dn) {
     ldapOpts.log && ldapOpts.log.trace(`admin did not find user! (${usernameAttribute}=${username})`)
-    throw new Error('user not found or usernameAttribute is wrong')
+    throw new LdapAuthenticationError('user not found or usernameAttribute is wrong')
   }
   var userDn = user.dn
   let ldapUserClient = await _ldapBind(userDn, userPassword, starttls, ldapOpts)
@@ -99,7 +99,7 @@ async function authenticateWithUser(userDn, userSearchBase, usernameAttribute, u
   var user = await _searchUser(ldapUserClient, userSearchBase, usernameAttribute, username)
   if (!user || !user.dn) {
     ldapOpts.log && ldapOpts.log.trace(`user logged in, but user details could not be found. (${usernameAttribute}=${username}). Probabaly wrong attribute or searchBase?`)
-    throw new Error('user logged in, but user details could not be found. Probabaly usernameAttribute or userSearchBase is wrong?')
+    throw new LdapAuthenticationError('user logged in, but user details could not be found. Probabaly usernameAttribute or userSearchBase is wrong?')
   }
   ldapUserClient.unbind()
   return user
@@ -142,5 +142,18 @@ async function authenticate(options) {
   )
 }
 
+class LdapAuthenticationError extends Error {
+  constructor(message) {
+    super(message)
+    // Ensure the name of this error is the same as the class name
+    this.name = this.constructor.name
+    // This clips the constructor invocation from the stack trace.
+    // It's not absolutely essential, but it does make the stack trace a little nicer.
+    //  @see Node.js reference (bottom)
+    Error.captureStackTrace(this, this.constructor);
+  }
+}
+
 module.exports.authenticate = authenticate
+module.exports.LdapAuthenticationError = LdapAuthenticationError
 

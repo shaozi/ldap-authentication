@@ -1,4 +1,4 @@
-const { authenticate } = require('../index.js')
+const { authenticate, LdapAuthenticationError } = require('../index.js')
 
 describe('ldap-authentication test', () => {
     test('Use an admin user to authenticate a regular user', async () => {
@@ -178,5 +178,24 @@ describe('ldap-authentication negative test', () => {
       e = error
     } 
     expect(e).toBeTruthy()
+  })
+  test('Wrong options give LdapAuthenticationError', async () => {
+    let options = {
+      ldapOpts: {
+        url: 'ldap://ldap.forumsys.com'
+      },
+      userDn: 'uid=einstein,dc=example,dc=com',
+      userPassword: 'password',
+      usernameAttribute: 'cn',
+      userSearchBase: 'dc=example,dc=com',
+      username: 'einstein'
+    }
+    try {
+      await authenticate(options)
+    } catch(error) {
+      e = error
+    } 
+    expect(e).toBeTruthy()
+    expect(e).toBeInstanceOf(LdapAuthenticationError)
   })
 })
