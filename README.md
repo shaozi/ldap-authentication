@@ -42,7 +42,7 @@ npm install ldap-authentication --save
 
 ```javascript
 let authenticated = await authenticate({
-  ldapOptions: {url: 'ldap://ldap.forumsys.com'},
+  ldapOpts: {url: 'ldap://ldap.forumsys.com'},
   userDn: 'uid=gauss,dc=example,dc=com',
   userPassword: 'password'
 })
@@ -52,7 +52,7 @@ let authenticated = await authenticate({
 
 ```javascript
 let authenticated = await authenticate({
-  ldapOptions: {url: 'ldap://ldap.forumsys.com'},
+  ldapOpts: {url: 'ldap://ldap.forumsys.com'},
   userDn: 'uid=gauss,dc=example,dc=com',
   userPassword: 'password',
   userSearchBase: 'dc=example,dc=com',
