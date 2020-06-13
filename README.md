@@ -3,6 +3,12 @@
 [![Build Status](https://travis-ci.org/shaozi/ldap-authentication.svg?branch=master)](https://travis-ci.org/shaozi/ldap-authentication)
 [![Known Vulnerabilities](https://snyk.io/test/github/shaozi/ldap-authentication/badge.svg?targetFile=package.json)](https://snyk.io/test/github/shaozi/ldap-authentication?targetFile=package.json)
 
+## Goal
+
+Make authentication with an LDAP server easy.
+
+## Description
+
 This library use `ldapjs` as the underneath library. It has two modes of authentications:
 
 1. **Admin authenticate mode**. If an admin user is provided, the library will login (ldap bind) with the admin user,
@@ -24,7 +30,7 @@ This library use `ldapjs` as the underneath library. It has two modes of authent
 - Supports ldap, ldaps, and STARTTLS
 - Async/Await Promise
 
-## How to Use
+## Usage
 
 ### Installation
 
@@ -111,8 +117,8 @@ auth()
 - `ldapOpts`: This is passed to `ldapjs` client directly
   - `url`: url of the ldap server. Example: `ldap://ldap.forumsys.com`
   - `tlsOptions`: options to pass to node tls. Example: `{ rejectUnauthorized: false }`
-  - `connectTimeout`: Int. Default: 5000. Connect timeout in ms
-- `adminDn`: The DN of the admistrator. Example: 'cn=read-only-admin,dc=example,dc=com',
+  - `connectTimeout`: Int. Default: `5000`. Connect timeout in ms
+- `adminDn`: The DN of the admistrator. Example: `cn=read-only-admin,dc=example,dc=com`,
 - `adminPassword`: The password of the admin.
 - `userDn`: The DN of the user to be authenticated. This is only needed if `adminDn` and `adminPassword` are not provided.
   Example: `uid=gauss,dc=example,dc=com`
