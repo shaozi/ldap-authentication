@@ -19,10 +19,10 @@ This library use `ldapjs` as the underneath library. It has two modes of authent
 
 ## Features
 
-* Can use an admin to search and authenticate a user
-* Can also use a regular user and authenticate the user itself
-* Supports ldap, ldaps, and STARTTLS
-* Async/Await Promise
+- Can use an admin to search and authenticate a user
+- Can also use a regular user and authenticate the user itself
+- Supports ldap, ldaps, and STARTTLS
+- Async/Await Promise
 
 ## How to Use
 
@@ -34,17 +34,17 @@ npm install ldap-authentication --save
 
 ### Examples
 
-* An example on how to use with Passport is [passport-ldap-example](https://github.com/shaozi/passport-ldap-example)
+- An example on how to use with Passport is [passport-ldap-example](https://github.com/shaozi/passport-ldap-example)
 
-* Another simple library [express-passport-ldap-mongoose](https://github.com/shaozi/express-passport-ldap-mongoose) provide turn key solution
+- Another simple library [express-passport-ldap-mongoose](https://github.com/shaozi/express-passport-ldap-mongoose) provide turn key solution
 
 #### User authenticate without getting user details
 
 ```javascript
 let authenticated = await authenticate({
-  ldapOpts: {url: 'ldap://ldap.forumsys.com'},
+  ldapOpts: { url: 'ldap://ldap.forumsys.com' },
   userDn: 'uid=gauss,dc=example,dc=com',
-  userPassword: 'password'
+  userPassword: 'password',
 })
 ```
 
@@ -52,23 +52,21 @@ let authenticated = await authenticate({
 
 ```javascript
 let authenticated = await authenticate({
-  ldapOpts: {url: 'ldap://ldap.forumsys.com'},
+  ldapOpts: { url: 'ldap://ldap.forumsys.com' },
   userDn: 'uid=gauss,dc=example,dc=com',
   userPassword: 'password',
   userSearchBase: 'dc=example,dc=com',
   usernameAttribute: 'uid',
-  username: 'gauss'
+  username: 'gauss',
 })
 ```
 
 #### Complete example
 
 ```javascript
-
 const { authenticate } = require('ldap-authentication')
 
 async function auth() {
-
   // auth with admin
   let options = {
     ldapOpts: {
@@ -80,10 +78,10 @@ async function auth() {
     userPassword: 'password',
     userSearchBase: 'dc=example,dc=com',
     usernameAttribute: 'uid',
-    username: 'gauss'
+    username: 'gauss',
     // starttls: false
   }
-  
+
   let user = await authenticate(options)
   console.log(user)
 
@@ -97,7 +95,7 @@ async function auth() {
     userPassword: 'password',
     userSearchBase: 'dc=example,dc=com',
     usernameAttribute: 'uid',
-    username: 'einstein'
+    username: 'einstein',
     // starttls: false
   }
 
@@ -106,28 +104,28 @@ async function auth() {
 }
 
 auth()
-
 ```
 
 ## Parameters
 
-* `ldapOpts`: This is passed to `ldapjs` client directly
-  * `url`: url of the ldap server. Example: `ldap://ldap.forumsys.com`
-  * `tlsOptions`: options to pass to node tls. Example: `{ rejectUnauthorized: false }`
-* `adminDn`: The DN of the admistrator. Example: 'cn=read-only-admin,dc=example,dc=com',
-* `adminPassword`: The password of the admin.
-* `userDn`: The DN of the user to be authenticated. This is only needed if `adminDn` and `adminPassword` are not provided.
-            Example: `uid=gauss,dc=example,dc=com`
-* `userPassword`: The password of the user,
-* `userSearchBase`: The ldap base DN to search the user. Example: `dc=example,dc=com`
-* `usernameAttribute`: The ldap search equality attribute name corresponding to the user's username.
-                       It will be used with the value in `username` to construct an ldap filter as `({attribute}={username})`
-                       to find the user and get user details in LDAP.
-                       In self authenticate mode (`userDn` and `userPassword` are provided, but not `adminDn` and `adminPassword`),
-                       if this value is not set, then authenticate will return true right after user bind succeed. No user details
-                       from LDAP search will be performed and returned.
-                       Example: `uid`
-* `username`: The username to authenticate with. It is used together with the name in `usernameAttribute` 
-              to construct an ldap filter as `({attribute}={username})`
-              to find the user and get user details in LDAP. Example: `some user input`
-* `starttls`: Boolean. Use `STARTTLS` or not
+- `ldapOpts`: This is passed to `ldapjs` client directly
+  - `url`: url of the ldap server. Example: `ldap://ldap.forumsys.com`
+  - `tlsOptions`: options to pass to node tls. Example: `{ rejectUnauthorized: false }`
+- `adminDn`: The DN of the admistrator. Example: 'cn=read-only-admin,dc=example,dc=com',
+- `adminPassword`: The password of the admin.
+- `userDn`: The DN of the user to be authenticated. This is only needed if `adminDn` and `adminPassword` are not provided.
+  Example: `uid=gauss,dc=example,dc=com`
+- `userPassword`: The password of the user,
+- `userSearchBase`: The ldap base DN to search the user. Example: `dc=example,dc=com`
+- `usernameAttribute`: The ldap search equality attribute name corresponding to the user's username.
+  It will be used with the value in `username` to construct an ldap filter as `({attribute}={username})`
+  to find the user and get user details in LDAP.
+  In self authenticate mode (`userDn` and `userPassword` are provided, but not `adminDn` and `adminPassword`),
+  if this value is not set, then authenticate will return true right after user bind succeed. No user details
+  from LDAP search will be performed and returned.
+  Example: `uid`
+- `username`: The username to authenticate with. It is used together with the name in `usernameAttribute`
+  to construct an ldap filter as `({attribute}={username})`
+  to find the user and get user details in LDAP. Example: `some user input`
+- `starttls`: Boolean. Use `STARTTLS` or not
+- `connectTimeout`: Int. Default: 5000. Connect timeout in ms

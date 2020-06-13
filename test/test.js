@@ -198,4 +198,23 @@ describe('ldap-authentication negative test', () => {
     expect(e).toBeTruthy()
     expect(e).toBeInstanceOf(LdapAuthenticationError)
   })
+  test('Unreachable ldap server should give meaningful error', async() => {
+    let options = {
+      ldapOpts: {
+        url: 'ldap://x.forumsys.com'
+      },
+      userDn: 'uid=einstein,dc=example,dc=com',
+      userPassword: 'password',
+      usernameAttribute: 'cn',
+      userSearchBase: 'dc=example,dc=com',
+      username: 'einstein'
+    }
+    try {
+      await authenticate(options)
+    } catch(error) {
+      e = error
+    } 
+    expect(e).toBeTruthy()
+    expect(e).toBeInstanceOf(LdapAuthenticationError)
+  }, 10000)
 })
