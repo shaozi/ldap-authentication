@@ -6,15 +6,6 @@ function _ldapBind(dn, password, starttls, ldapOpts) {
   return new Promise(function (resolve, reject) {
     ldapOpts.connectTimeout = ldapOpts.connectTimeout || 5000
     var client = ldap.createClient(ldapOpts)
-    client.on('connectTimeout', () => {
-      reject(new LdapAuthenticationError('connectTimeout'))
-    })
-    client.on('connectRefused', () => {
-      reject(new LdapAuthenticationError('connectRefused'))
-    })
-    client.on('error', () => {
-      reject(new LdapAuthenticationError('ldap error'))
-    })
     if (starttls) {
       client.starttls(ldapOpts.tlsOptions, null, function (error) {
         if (error) {
