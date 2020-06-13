@@ -1,23 +1,23 @@
 const { authenticate } = require('../index')
 
 async function auth() {
-
   // auth with admin
   let options = {
     ldapOpts: {
-      url: 'ldap://ldap.forumsys.com',
+      url: 'ldap://ldapx.forumsys.com',
       // tlsOptions: { rejectUnauthorized: false }
     },
     adminDn: 'cn=read-only-admin,dc=example,dc=com',
     adminPassword: 'password',
     userPassword: 'password',
     userSearchBase: 'dc=example,dc=com',
-    userSearchFilter: '(uid=gauss)',
+    usernameAttribute: 'uid',
+    username: 'gauss',
     // starttls: false
   }
-  
+
   let user = await authenticate(options)
-  console.log(user)
+  console.log(`user = ${JSON.stringify(user, null, 2)}`)
 
   // auth with regular user
   options = {
@@ -28,12 +28,13 @@ async function auth() {
     userDn: 'uid=einstein,dc=example,dc=com',
     userPassword: 'password',
     userSearchBase: 'dc=example,dc=com',
-    userSearchFilter: '(uid=einstein)',
+    usernameAttribute: 'uid',
+    username: 'einstein',
     // starttls: false
   }
 
   user = await authenticate(options)
-  console.log(user)
+  console.log(`user = ${JSON.stringify(user, null, 2)}`)
 }
 
 auth()
