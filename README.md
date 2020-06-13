@@ -111,6 +111,7 @@ auth()
 - `ldapOpts`: This is passed to `ldapjs` client directly
   - `url`: url of the ldap server. Example: `ldap://ldap.forumsys.com`
   - `tlsOptions`: options to pass to node tls. Example: `{ rejectUnauthorized: false }`
+  - `connectTimeout`: Int. Default: 5000. Connect timeout in ms
 - `adminDn`: The DN of the admistrator. Example: 'cn=read-only-admin,dc=example,dc=com',
 - `adminPassword`: The password of the admin.
 - `userDn`: The DN of the user to be authenticated. This is only needed if `adminDn` and `adminPassword` are not provided.
@@ -128,4 +129,3 @@ auth()
   to construct an ldap filter as `({attribute}={username})`
   to find the user and get user details in LDAP. Example: `some user input`
 - `starttls`: Boolean. Use `STARTTLS` or not
-- `connectTimeout`: Int. Default: 5000. Connect timeout in ms

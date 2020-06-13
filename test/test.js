@@ -202,6 +202,7 @@ describe('ldap-authentication negative test', () => {
     let options = {
       ldapOpts: {
         url: 'ldap://x.forumsys.com',
+        connectTimeout: 2000,
       },
       userDn: 'uid=einstein,dc=example,dc=com',
       userPassword: 'password',
@@ -215,5 +216,5 @@ describe('ldap-authentication negative test', () => {
       e = error
     }
     expect(e).toBeTruthy()
-  }, 10000)
+  })
 })
