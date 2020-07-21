@@ -67,6 +67,21 @@ let authenticated = await authenticate({
 })
 ```
 
+#### User authenticate and return user details with groups
+
+```javascript
+let authenticated = await authenticate({
+  ldapOpts: { url: 'ldap://ldap.forumsys.com' },
+  userDn: 'uid=gauss,dc=example,dc=com',
+  userPassword: 'password',
+  userSearchBase: 'dc=example,dc=com',
+  usernameAttribute: 'uid',
+  username: 'gauss',
+  groupsSearchBase: 'dc=example,dc=com',
+  groupClass: 'group'
+})
+```
+
 #### Complete example
 
 ```javascript
@@ -135,3 +150,5 @@ auth()
   to construct an ldap filter as `({attribute}={username})`
   to find the user and get user details in LDAP. Example: `some user input`
 - `starttls`: Boolean. Use `STARTTLS` or not
+- `groupsSearchBase`: if specified with groupClass, will serve as search base for authenticated user groups
+- `groupClass`: if specified with groupsSearchBase, will be used as objectClass in search filter for authenticated user groups
