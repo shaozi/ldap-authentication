@@ -85,6 +85,51 @@ async function _searchUser(
   })
 }
 
+// search a groups which user is member
+async function _searchUserGroups(
+  ldapClient,
+  searchBase,
+  user,
+  groupClass
+) {
+  return new Promise(function (resolve, reject) {
+    ldapClient.search(
+      searchBase,
+      {
+        filter: `(&(objectclass=${groupClass})(member=${user.dn}))`,
+        scope: 'sub',
+      },
+      function (err, res) {
+        var groups = []
+        if (err) {
+          reject(err)
+          ldapClient.unbind()
+          return
+        }
+        res.on('searchEntry', function (entry) {
+          groups.push(entry.object)
+        })
+        res.on('searchReference', function (referral) {
+          console.log('referral: ' + referral.uris.join())
+        })
+        res.on('error', function (err) {
+          console.error('error: ' + err.message)
+          reject(err)
+          ldapClient.unbind()
+        })
+        res.on('end', function (result) {
+          if (result.status != 0) {
+            reject(new Error('ldap search status is not 0, search failed'))
+          } else {
+            resolve(groups)
+          }
+          ldapClient.unbind()
+        })
+      }
+    )
+  })
+}
+
 async function authenticateWithAdmin(
   adminDn,
   adminPassword,
@@ -93,14 +138,21 @@ async function authenticateWithAdmin(
   username,
   userPassword,
   starttls,
-  ldapOpts
+  ldapOpts,
+  groupsSearchBase,
+  groupClass
 ) {
-  var ldapAdminClient = await _ldapBind(
-    adminDn,
-    adminPassword,
-    starttls,
-    ldapOpts
-  )
+  var ldapAdminClient
+  try {
+    ldapAdminClient = await _ldapBind(
+      adminDn,
+      adminPassword,
+      starttls,
+      ldapOpts
+    )
+  } catch (error) {
+    throw {admin:error}
+  }
   var user = await _searchUser(
     ldapAdminClient,
     userSearchBase,
@@ -118,8 +170,28 @@ async function authenticateWithAdmin(
     )
   }
   var userDn = user.dn
-  let ldapUserClient = await _ldapBind(userDn, userPassword, starttls, ldapOpts)
+  let ldapUserClient
+  try {
+    ldapUserClient = await _ldapBind(userDn, userPassword, starttls, ldapOpts)
+  } catch (error) {
+    throw error
+  }
   ldapUserClient.unbind()
+  if (groupsSearchBase && groupClass) {
+    try {
+      ldapUserClient = await _ldapBind(userDn, userPassword, starttls, ldapOpts)
+    } catch (error) {
+      throw error
+    }
+    var groups = await _searchUserGroups(
+      ldapUserClient,
+      groupsSearchBase,
+      user,
+      groupClass
+    );
+    user.groups = groups;
+    ldapUserClient.unbind()
+  }
   return user
 }
 
@@ -130,9 +202,16 @@ async function authenticateWithUser(
   username,
   userPassword,
   starttls,
-  ldapOpts
+  ldapOpts,
+  groupsSearchBase,
+  groupClass
 ) {
-  let ldapUserClient = await _ldapBind(userDn, userPassword, starttls, ldapOpts)
+  let ldapUserClient
+  try {
+    ldapUserClient = await _ldapBind(userDn, userPassword, starttls, ldapOpts)
+  } catch (error) {
+    throw error
+  }
   if (!usernameAttribute || !userSearchBase) {
     // if usernameAttribute is not provided, no user detail is needed.
     ldapUserClient.unbind()
@@ -154,6 +233,21 @@ async function authenticateWithUser(
     )
   }
   ldapUserClient.unbind()
+  if (groupsSearchBase && groupClass) {
+    try {
+      ldapUserClient = await _ldapBind(userDn, userPassword, starttls, ldapOpts)
+    } catch (error) {
+      throw error
+    }
+    var groups = await _searchUserGroups(
+      ldapUserClient,
+      groupsSearchBase,
+      user,
+      groupClass
+    );
+    user.groups = groups;
+    ldapUserClient.unbind()
+  }
   return user
 }
 
@@ -188,7 +282,9 @@ async function authenticate(options) {
       options.username,
       options.userPassword,
       options.starttls,
-      options.ldapOpts
+      options.ldapOpts,
+      options.groupsSearchBase,
+      options.groupClass
     )
   }
   assert(options.userDn, 'adminDn/adminPassword OR userDn must be provided')
@@ -199,7 +295,9 @@ async function authenticate(options) {
     options.username,
     options.userPassword,
     options.starttls,
-    options.ldapOpts
+    options.ldapOpts,
+    options.groupsSearchBase,
+    options.groupClass
   )
 }
 
