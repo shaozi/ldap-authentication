@@ -1,7 +1,7 @@
 const { authenticate, LdapAuthenticationError } = require('../index.js')
 
 describe('ldap-authentication test', () => {
-  test('Use an admin user to authenticate a regular user', async () => {
+  it('Use an admin user to authenticate a regular user', async () => {
     let options = {
       ldapOpts: {
         url: 'ldap://ldap.forumsys.com',
@@ -17,7 +17,7 @@ describe('ldap-authentication test', () => {
     expect(user).toBeTruthy()
     expect(user.uid).toEqual('gauss')
   })
-  test('Use an regular user to authenticate iteself', async () => {
+  it('Use an regular user to authenticate iteself', async () => {
     let options = {
       ldapOpts: {
         url: 'ldap://ldap.forumsys.com',
@@ -32,7 +32,7 @@ describe('ldap-authentication test', () => {
     expect(user).toBeTruthy()
     expect(user.uid).toEqual('einstein')
   })
-  test('Use an regular user to authenticate iteself without search', async () => {
+  it('Use an regular user to authenticate iteself without search', async () => {
     let options = {
       ldapOpts: {
         url: 'ldap://ldap.forumsys.com',
@@ -46,7 +46,7 @@ describe('ldap-authentication test', () => {
 })
 
 describe('ldap-authentication negative test', () => {
-  test('wrong admin user should fail', async () => {
+  it('wrong admin user should fail', async () => {
     let options = {
       ldapOpts: {
         url: 'ldap://ldap.forumsys.com',
@@ -66,7 +66,7 @@ describe('ldap-authentication negative test', () => {
     }
     expect(e).toBeTruthy()
   })
-  test('wrong admin password should fail', async () => {
+  it('wrong admin password should fail', async () => {
     let options = {
       ldapOpts: {
         url: 'ldap://ldap.forumsys.com',
@@ -86,7 +86,7 @@ describe('ldap-authentication negative test', () => {
     }
     expect(e).toBeTruthy()
   })
-  test('admin auth wrong username should fail', async () => {
+  it('admin auth wrong username should fail', async () => {
     let options = {
       ldapOpts: {
         url: 'ldap://ldap.forumsys.com',
@@ -106,7 +106,7 @@ describe('ldap-authentication negative test', () => {
     }
     expect(e).toBeTruthy()
   })
-  test('admin auth wrong user password should fail', async () => {
+  it('admin auth wrong user password should fail', async () => {
     let options = {
       ldapOpts: {
         url: 'ldap://ldap.forumsys.com',
@@ -126,7 +126,7 @@ describe('ldap-authentication negative test', () => {
     }
     expect(e).toBeTruthy()
   })
-  test('user auth wrong username should fail', async () => {
+  it('user auth wrong username should fail', async () => {
     let options = {
       ldapOpts: {
         url: 'ldap://ldap.forumsys.com',
@@ -145,7 +145,7 @@ describe('ldap-authentication negative test', () => {
     }
     expect(e).toBeTruthy()
   })
-  test('user auth wrong user password should fail', async () => {
+  it('user auth wrong user password should fail', async () => {
     let options = {
       ldapOpts: {
         url: 'ldap://ldap.forumsys.com',
@@ -164,7 +164,7 @@ describe('ldap-authentication negative test', () => {
     }
     expect(e).toBeTruthy()
   })
-  test('Use an regular user to authenticate iteself without search with wrong password should fail', async () => {
+  it('Use an regular user to authenticate iteself without search with wrong password should fail', async () => {
     let options = {
       ldapOpts: {
         url: 'ldap://ldap.forumsys.com',
@@ -179,7 +179,7 @@ describe('ldap-authentication negative test', () => {
     }
     expect(e).toBeTruthy()
   })
-  test('Wrong options give LdapAuthenticationError', async () => {
+  it('Wrong options give LdapAuthenticationError', async () => {
     let options = {
       ldapOpts: {
         url: 'ldap://ldap.forumsys.com',
@@ -198,7 +198,7 @@ describe('ldap-authentication negative test', () => {
     expect(e).toBeTruthy()
     expect(e).toBeInstanceOf(LdapAuthenticationError)
   })
-  test('Unreachable ldap server should throw error', async () => {
+  it('Unreachable ldap server should throw error', async () => {
     let options = {
       ldapOpts: {
         url: 'ldap://x.forumsys.com',
