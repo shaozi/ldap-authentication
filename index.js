@@ -179,18 +179,18 @@ async function authenticateWithAdmin(
   ldapUserClient.unbind()
   if (groupsSearchBase && groupClass) {
     try {
-      ldapUserClient = await _ldapBind(userDn, userPassword, starttls, ldapOpts)
+      ldapAdminClient = await _ldapBind(adminDn, adminPassword, starttls, ldapOpts)
     } catch (error) {
       throw error
     }
     var groups = await _searchUserGroups(
-      ldapUserClient,
+      ldapAdminClient,
       groupsSearchBase,
       user,
       groupClass
     );
     user.groups = groups;
-    ldapUserClient.unbind()
+    ldapAdminClient.unbind()
   }
   return user
 }
