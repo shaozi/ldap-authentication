@@ -68,7 +68,6 @@ async function _searchUser(
           console.log('referral: ' + referral.uris.join())
         })
         res.on('error', function (err) {
-          console.error('error: ' + err.message)
           reject(err)
           ldapClient.unbind()
         })
@@ -86,12 +85,7 @@ async function _searchUser(
 }
 
 // search a groups which user is member
-async function _searchUserGroups(
-  ldapClient,
-  searchBase,
-  user,
-  groupClass
-) {
+async function _searchUserGroups(ldapClient, searchBase, user, groupClass) {
   return new Promise(function (resolve, reject) {
     ldapClient.search(
       searchBase,
@@ -113,7 +107,6 @@ async function _searchUserGroups(
           console.log('referral: ' + referral.uris.join())
         })
         res.on('error', function (err) {
-          console.error('error: ' + err.message)
           reject(err)
           ldapClient.unbind()
         })
@@ -151,7 +144,7 @@ async function authenticateWithAdmin(
       ldapOpts
     )
   } catch (error) {
-    throw {admin:error}
+    throw { admin: error }
   }
   var user = await _searchUser(
     ldapAdminClient,
@@ -179,7 +172,12 @@ async function authenticateWithAdmin(
   ldapUserClient.unbind()
   if (groupsSearchBase && groupClass) {
     try {
-      ldapAdminClient = await _ldapBind(adminDn, adminPassword, starttls, ldapOpts)
+      ldapAdminClient = await _ldapBind(
+        adminDn,
+        adminPassword,
+        starttls,
+        ldapOpts
+      )
     } catch (error) {
       throw error
     }
@@ -188,8 +186,8 @@ async function authenticateWithAdmin(
       groupsSearchBase,
       user,
       groupClass
-    );
-    user.groups = groups;
+    )
+    user.groups = groups
     ldapAdminClient.unbind()
   }
   return user
@@ -244,8 +242,8 @@ async function authenticateWithUser(
       groupsSearchBase,
       user,
       groupClass
-    );
-    user.groups = groups;
+    )
+    user.groups = groups
     ldapUserClient.unbind()
   }
   return user
