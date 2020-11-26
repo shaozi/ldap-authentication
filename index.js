@@ -85,12 +85,12 @@ async function _searchUser(
 }
 
 // search a groups which user is member
-async function _searchUserGroups(ldapClient, searchBase, user, groupClass) {
+async function _searchUserGroups(ldapClient, searchBase, user, groupClass, groupMemberAttribute) {
   return new Promise(function (resolve, reject) {
     ldapClient.search(
       searchBase,
       {
-        filter: `(&(objectclass=${groupClass})(member=${user.dn}))`,
+        filter: `(&(objectclass=${groupClass})(${groupMemberAttribute}=${user.dn}))`,
         scope: 'sub',
       },
       function (err, res) {
@@ -133,7 +133,8 @@ async function authenticateWithAdmin(
   starttls,
   ldapOpts,
   groupsSearchBase,
-  groupClass
+  groupClass,
+  groupMemberAttribute
 ) {
   var ldapAdminClient
   try {
@@ -170,7 +171,7 @@ async function authenticateWithAdmin(
     throw error
   }
   ldapUserClient.unbind()
-  if (groupsSearchBase && groupClass) {
+  if (groupsSearchBase && groupClass && groupMemberAttribute) {
     try {
       ldapAdminClient = await _ldapBind(
         adminDn,
@@ -185,7 +186,8 @@ async function authenticateWithAdmin(
       ldapAdminClient,
       groupsSearchBase,
       user,
-      groupClass
+      groupClass,
+      groupMemberAttribute
     )
     user.groups = groups
     ldapAdminClient.unbind()
@@ -202,7 +204,8 @@ async function authenticateWithUser(
   starttls,
   ldapOpts,
   groupsSearchBase,
-  groupClass
+  groupClass,
+  groupMemberAttribute
 ) {
   let ldapUserClient
   try {
@@ -231,7 +234,7 @@ async function authenticateWithUser(
     )
   }
   ldapUserClient.unbind()
-  if (groupsSearchBase && groupClass) {
+  if (groupsSearchBase && groupClass && groupMemberAttribute) {
     try {
       ldapUserClient = await _ldapBind(userDn, userPassword, starttls, ldapOpts)
     } catch (error) {
@@ -241,7 +244,8 @@ async function authenticateWithUser(
       ldapUserClient,
       groupsSearchBase,
       user,
-      groupClass
+      groupClass,
+      groupMemberAttribute
     )
     user.groups = groups
     ldapUserClient.unbind()
@@ -282,7 +286,8 @@ async function authenticate(options) {
       options.starttls,
       options.ldapOpts,
       options.groupsSearchBase,
-      options.groupClass
+      options.groupClass,
+      options.groupMemberAttribute
     )
   }
   assert(options.userDn, 'adminDn/adminPassword OR userDn must be provided')
@@ -295,7 +300,8 @@ async function authenticate(options) {
     options.starttls,
     options.ldapOpts,
     options.groupsSearchBase,
-    options.groupClass
+    options.groupClass,
+    options.groupMemberAttribute
   )
 }
 
