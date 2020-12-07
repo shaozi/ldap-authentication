@@ -217,4 +217,24 @@ describe('ldap-authentication negative test', () => {
     }
     expect(e).toBeTruthy()
   })
+  it('Unreachable ldap server should throw error (with starttls=true)', async () => {
+    let options = {
+      ldapOpts: {
+        url: 'ldap://x.forumsys.com',
+		connectTimeout: 2000
+      },
+      userDn: 'uid=einstein,dc=example,dc=com',
+      userPassword: 'password',
+      usernameAttribute: 'cn',
+      userSearchBase: 'dc=example,dc=com',
+	  username: 'einstein',
+	  starttls: true
+    }
+    try {
+      await authenticate(options)
+    } catch (error) {
+      e = error
+    }
+    expect(e).toBeTruthy()
+  })
 })

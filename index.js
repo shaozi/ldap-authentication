@@ -6,12 +6,25 @@ function _ldapBind(dn, password, starttls, ldapOpts) {
   return new Promise(function (resolve, reject) {
     ldapOpts.connectTimeout = ldapOpts.connectTimeout || 5000
     var client = ldap.createClient(ldapOpts)
-    if (starttls) {
-      client.starttls(ldapOpts.tlsOptions, null, function (error) {
-        if (error) {
-          reject(error)
-          return
-        }
+
+    client.on('connect', function () {
+      if (starttls) {
+        client.starttls(ldapOpts.tlsOptions, null, function (error) {
+          if (error) {
+            reject(error)
+            return
+          }
+          client.bind(dn, password, function (err) {
+            if (err) {
+              reject(err)
+              client.unbind()
+              return
+            }
+            ldapOpts.log && ldapOpts.log.trace('bind success!')
+            resolve(client)
+          })
+        })
+      } else {
         client.bind(dn, password, function (err) {
           if (err) {
             reject(err)
@@ -21,19 +34,17 @@ function _ldapBind(dn, password, starttls, ldapOpts) {
           ldapOpts.log && ldapOpts.log.trace('bind success!')
           resolve(client)
         })
-      })
-    } else {
-      client.bind(dn, password, function (err) {
-        if (err) {
-          reject(err)
-          client.unbind()
-          return
-        }
-        ldapOpts.log && ldapOpts.log.trace('bind success!')
-        resolve(client)
-      })
-    }
-  })
+      }
+    });
+
+    client.on('connectError', function(error){
+      if (error) {
+        reject(error)
+        return
+      }
+    });
+
+  });
 }
 
 // search a user and return the object
