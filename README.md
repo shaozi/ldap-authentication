@@ -153,4 +153,4 @@ auth()
 - `starttls`: Boolean. Use `STARTTLS` or not
 - `groupsSearchBase`: if specified with groupClass, will serve as search base for authenticated user groups
 - `groupClass`: if specified with groupsSearchBase, will be used as objectClass in search filter for authenticated user groups
-- `groupMemberAttribute`: if specified with groupClass and groupsSearchBase, will be used as member name (if not specified this default to `member`) in search filter for authenticated user groups
+- `groupMemberAttribute`: if specified with groupClass and groupsSearchBase, will be used as member name (if not specified this defaults to `member`) in search filter for authenticated user groups
