@@ -85,7 +85,13 @@ async function _searchUser(
 }
 
 // search a groups which user is member
-async function _searchUserGroups(ldapClient, searchBase, user, groupClass, groupMemberAttribute) {
+async function _searchUserGroups(
+  ldapClient,
+  searchBase,
+  user,
+  groupClass,
+  groupMemberAttribute = 'member'
+) {
   return new Promise(function (resolve, reject) {
     ldapClient.search(
       searchBase,
@@ -134,7 +140,7 @@ async function authenticateWithAdmin(
   ldapOpts,
   groupsSearchBase,
   groupClass,
-  groupMemberAttribute
+  groupMemberAttribute = 'member'
 ) {
   var ldapAdminClient
   try {
@@ -205,7 +211,7 @@ async function authenticateWithUser(
   ldapOpts,
   groupsSearchBase,
   groupClass,
-  groupMemberAttribute
+  groupMemberAttribute = 'member'
 ) {
   let ldapUserClient
   try {

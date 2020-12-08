@@ -43,6 +43,60 @@ describe('ldap-authentication test', () => {
     let user = await authenticate(options)
     expect(user).toBeTruthy()
   })
+  it('Use an admin user to authenticate a regular user and fetch user group information', async () => {
+    let options = {
+      ldapOpts: {
+        url: 'ldap://ldap.forumsys.com',
+      },
+      adminDn: 'cn=read-only-admin,dc=example,dc=com',
+      adminPassword: 'password',
+      userPassword: 'password',
+      userSearchBase: 'dc=example,dc=com',
+      usernameAttribute: 'uid',
+      username: 'gauss',
+      groupsSearchBase: 'dc=example,dc=com',
+      groupClass: 'groupOfUniqueNames',
+      groupMemberAttribute: 'uniqueMember',
+    }
+    let user = await authenticate(options)
+    expect(user).toBeTruthy()
+    expect(user.groups.length).toBeGreaterThan(0)
+  })
+  it('Use regular user to authenticate and fetch user group information', async () => {
+    let options = {
+      ldapOpts: {
+        url: 'ldap://ldap.forumsys.com',
+      },
+      userDn: 'uid=gauss,dc=example,dc=com',
+      userPassword: 'password',
+      userSearchBase: 'dc=example,dc=com',
+      usernameAttribute: 'uid',
+      username: 'gauss',
+      groupsSearchBase: 'dc=example,dc=com',
+      groupClass: 'groupOfUniqueNames',
+      groupMemberAttribute: 'uniqueMember',
+    }
+    let user = await authenticate(options)
+    expect(user).toBeTruthy()
+    expect(user.groups.length).toBeGreaterThan(0)
+  })
+  it('Not specifying groupMemberAttribute should not cause an error and fallback do default value', async () => {
+    let options = {
+      ldapOpts: {
+        url: 'ldap://ldap.forumsys.com',
+      },
+      userDn: 'uid=gauss,dc=example,dc=com',
+      userPassword: 'password',
+      userSearchBase: 'dc=example,dc=com',
+      usernameAttribute: 'uid',
+      username: 'gauss',
+      groupsSearchBase: 'dc=example,dc=com',
+      groupClass: 'groupOfUniqueNames',
+    }
+    let user = await authenticate(options)
+    expect(user).toBeTruthy()
+    expect(user.groups.length).toBeLessThan(1)
+  })
 })
 
 describe('ldap-authentication negative test', () => {
