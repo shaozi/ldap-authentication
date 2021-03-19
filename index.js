@@ -37,6 +37,17 @@ function _ldapBind(dn, password, starttls, ldapOpts) {
       }
     });
 
+    //Fix for issue https://github.com/shaozi/ldap-authentication/issues/13
+    client.on('timeout', (err) => {
+      reject(err);
+    });
+    client.on('connectTimeout', (err) => {
+      reject(err);
+    });
+    client.on('error', (err) => {
+      reject(err);
+    });
+
     client.on('connectError', function(error){
       if (error) {
         reject(error)
