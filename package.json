@@ -1,6 +1,6 @@
 {
   "name": "ldap-authentication",
-  "version": "2.2.6",
+  "version": "2.2.7",
   "description": "A simple async nodejs library for LDAP user authentication",
   "main": "index.js",
   "scripts": {
@@ -35,10 +35,10 @@
   },
   "homepage": "https://github.com/shaozi/ldap-authentication#readme",
   "dependencies": {
-    "ldapjs": "^2.2.0"
+    "ldapjs": "^2.2.4"
   },
   "devDependencies": {
-    "jasmine": "^3.6.1",
+    "jasmine": "^3.7.0",
     "jasmine-console-reporter": "^3.1.0"
   }
 }
