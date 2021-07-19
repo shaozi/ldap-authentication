@@ -77,7 +77,7 @@ async function _searchUser(
                 scope: 'sub',
             },
             function (err, res) {
-                var ldapObject = null
+                var ldapObject = {}
                 if (err) {
                     reject(err)
                     ldapClient.unbind()

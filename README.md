@@ -104,8 +104,9 @@ async function auth() {
     // starttls: false
   }
 
-  let user = await authenticate(options)
+  let {user, attributes} = await authenticate(options)
   console.log(user)
+  console.log(attributes)  
 
   // auth with regular user
   options = {
@@ -121,8 +122,9 @@ async function auth() {
     // starttls: false
   }
 
-  user = await authenticate(options)
+  {user, attributes} await authenticate(options)
   console.log(user)
+  console.log(attributes)
 }
 
 auth()
