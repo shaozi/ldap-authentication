@@ -80,6 +80,7 @@ let authenticated = await authenticate({
   groupsSearchBase: 'dc=example,dc=com',
   groupClass: 'groupOfUniqueNames',
   groupMemberAttribute: 'uniqueMember',
+  // groupMemberUserAttribute: 'dn'
 })
 ```
 
@@ -154,3 +155,4 @@ auth()
 - `groupsSearchBase`: if specified with groupClass, will serve as search base for authenticated user groups
 - `groupClass`: if specified with groupsSearchBase, will be used as objectClass in search filter for authenticated user groups
 - `groupMemberAttribute`: if specified with groupClass and groupsSearchBase, will be used as member name (if not specified this defaults to `member`) in search filter for authenticated user groups
+- `groupMemberUserAttribute`: if specified with groupClass and groupsSearchBase, will be used as the attribute on the user object (if not specified this defaults to `dn`) in search filter for authenticated user groups

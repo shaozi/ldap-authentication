@@ -112,13 +112,14 @@ async function _searchUserGroups(
   searchBase,
   user,
   groupClass,
-  groupMemberAttribute = 'member'
+  groupMemberAttribute = 'member',
+  groupMemberUserAttribute = 'dn'
 ) {
   return new Promise(function (resolve, reject) {
     ldapClient.search(
       searchBase,
       {
-        filter: `(&(objectclass=${groupClass})(${groupMemberAttribute}=${user.dn}))`,
+        filter: `(&(objectclass=${groupClass})(${groupMemberAttribute}=${user[groupMemberUserAttribute]}))`,
         scope: 'sub',
       },
       function (err, res) {
@@ -162,7 +163,8 @@ async function authenticateWithAdmin(
   ldapOpts,
   groupsSearchBase,
   groupClass,
-  groupMemberAttribute = 'member'
+  groupMemberAttribute = 'member',
+  groupMemberUserAttribute
 ) {
   var ldapAdminClient
   try {
@@ -215,7 +217,8 @@ async function authenticateWithAdmin(
       groupsSearchBase,
       user,
       groupClass,
-      groupMemberAttribute
+      groupMemberAttribute,
+      groupMemberUserAttribute
     )
     user.groups = groups
     ldapAdminClient.unbind()
@@ -233,7 +236,8 @@ async function authenticateWithUser(
   ldapOpts,
   groupsSearchBase,
   groupClass,
-  groupMemberAttribute = 'member'
+  groupMemberAttribute = 'member',
+  groupMemberUserAttribute
 ) {
   let ldapUserClient
   try {
@@ -273,7 +277,8 @@ async function authenticateWithUser(
       groupsSearchBase,
       user,
       groupClass,
-      groupMemberAttribute
+      groupMemberAttribute,
+      groupMemberUserAttribute
     )
     user.groups = groups
     ldapUserClient.unbind()
@@ -315,7 +320,8 @@ async function authenticate(options) {
       options.ldapOpts,
       options.groupsSearchBase,
       options.groupClass,
-      options.groupMemberAttribute
+      options.groupMemberAttribute,
+			options.groupMemberUserAttribute
     )
   }
   assert(options.userDn, 'adminDn/adminPassword OR userDn must be provided')
@@ -329,7 +335,8 @@ async function authenticate(options) {
     options.ldapOpts,
     options.groupsSearchBase,
     options.groupClass,
-    options.groupMemberAttribute
+    options.groupMemberAttribute,
+    options.groupMemberUserAttribute
   )
 }
 
