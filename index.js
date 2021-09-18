@@ -286,6 +286,71 @@ async function authenticateWithUser(
   return user
 }
 
+async function verifyUserExists(
+  adminDn,
+  adminPassword,
+  userSearchBase,
+  usernameAttribute,
+  username,
+  starttls,
+  ldapOpts,
+  groupsSearchBase,
+  groupClass,
+  groupMemberAttribute = 'member',
+  groupMemberUserAttribute
+) {
+  var ldapAdminClient
+  try {
+    ldapAdminClient = await _ldapBind(
+      adminDn,
+      adminPassword,
+      starttls,
+      ldapOpts
+    )
+  } catch (error) {
+    throw { admin: error }
+  }
+  var user = await _searchUser(
+    ldapAdminClient,
+    userSearchBase,
+    usernameAttribute,
+    username
+  )
+  ldapAdminClient.unbind()
+  if (!user || !user.dn) {
+    ldapOpts.log &&
+      ldapOpts.log.trace(
+        `admin did not find user! (${usernameAttribute}=${username})`
+      )
+    throw new LdapAuthenticationError(
+      'user not found or usernameAttribute is wrong'
+    )
+  }
+  if (groupsSearchBase && groupClass && groupMemberAttribute) {
+    try {
+      ldapAdminClient = await _ldapBind(
+        adminDn,
+        adminPassword,
+        starttls,
+        ldapOpts
+      )
+    } catch (error) {
+      throw error
+    }
+    var groups = await _searchUserGroups(
+      ldapAdminClient,
+      groupsSearchBase,
+      user,
+      groupClass,
+      groupMemberAttribute,
+      groupMemberUserAttribute
+    )
+    user.groups = groups
+    ldapAdminClient.unbind()
+  }
+  return user
+}
+
 async function authenticate(options) {
   if (!options.userDn) {
     assert(options.adminDn, 'Admin mode adminDn must be provided')
@@ -299,11 +364,31 @@ async function authenticate(options) {
   } else {
     assert(options.userDn, 'User mode userDn must be provided')
   }
-  assert(options.userPassword, 'userPassword must be provided')
+  // assert(options.userPassword, 'userPassword must be provided')
   assert(
     options.ldapOpts && options.ldapOpts.url,
     'ldapOpts.url must be provided'
   )
+  if (options.verifyUserExists) {
+    assert(options.adminDn, 'Admin mode adminDn must be provided')
+    assert(
+      options.adminPassword,
+      'adminDn and adminPassword must be both provided.'
+    )
+    return await verifyUserExists(
+      options.adminDn,
+      options.adminPassword,
+      options.userSearchBase,
+      options.usernameAttribute,
+      options.username,
+      options.starttls,
+      options.ldapOpts,
+      options.groupsSearchBase,
+      options.groupClass,
+      options.groupMemberAttribute,
+      options.groupMemberUserAttribute
+    )
+  }
   if (options.adminDn) {
     assert(
       options.adminPassword,
