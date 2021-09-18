@@ -352,7 +352,6 @@ async function verifyUserExists(
 }
 
 async function authenticate(options) {
-console.log('authenticate')
   if (!options.userDn) {
     assert(options.adminDn, 'Admin mode adminDn must be provided')
     assert(options.adminPassword, 'Admin mode adminPassword must be provided')
