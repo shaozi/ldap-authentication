@@ -352,6 +352,7 @@ async function verifyUserExists(
 }
 
 async function authenticate(options) {
+console.log('authenticate')
   if (!options.userDn) {
     assert(options.adminDn, 'Admin mode adminDn must be provided')
     assert(options.adminPassword, 'Admin mode adminPassword must be provided')
@@ -364,7 +365,6 @@ async function authenticate(options) {
   } else {
     assert(options.userDn, 'User mode userDn must be provided')
   }
-  // assert(options.userPassword, 'userPassword must be provided')
   assert(
     options.ldapOpts && options.ldapOpts.url,
     'ldapOpts.url must be provided'
@@ -389,6 +389,7 @@ async function authenticate(options) {
       options.groupMemberUserAttribute
     )
   }
+  assert(options.userPassword, 'userPassword must be provided')
   if (options.adminDn) {
     assert(
       options.adminPassword,
