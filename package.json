@@ -1,6 +1,6 @@
 {
   "name": "ldap-authentication",
-  "version": "2.2.8",
+  "version": "2.2.9",
   "description": "A simple async nodejs library for LDAP user authentication",
   "main": "index.js",
   "scripts": {
