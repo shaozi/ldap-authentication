@@ -1,6 +1,22 @@
 const { authenticate, LdapAuthenticationError } = require('../index.js')
 
 describe('ldap-authentication test', () => {
+  it('Use an admin user to check if user exists', async () => {
+    let options = {
+      ldapOpts: {
+        url: 'ldap://ldap.forumsys.com',
+      },
+      adminDn: 'cn=read-only-admin,dc=example,dc=com',
+      adminPassword: 'password',
+      verifyUserExists : true,
+      userSearchBase: 'dc=example,dc=com',
+      usernameAttribute: 'uid',
+      username: 'gauss',
+    }
+    let user = await authenticate(options)
+    expect(user).toBeTruthy()
+    expect(user.uid).toEqual('gauss')
+  })
   it('Use an admin user to authenticate a regular user', async () => {
     let options = {
       ldapOpts: {

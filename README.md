@@ -23,6 +23,9 @@ This library use `ldapjs` as the underneath library. It has two modes of authent
    Otherwise, the lib does a login with the `userDn` and `userPassword` (ldap bind),
    then does a search on the user and return the user's details.
 
+3. **Verify user exists**. If an `verifyUserExists : true` is provided, the library will login (ldap bind) with the admin user,
+      then search for the user to be verified. If the user exists, user details will be returned (without verifying the user's password).
+
 ## Features
 
 - Can use an admin to search and authenticate a user
@@ -61,6 +64,19 @@ let authenticated = await authenticate({
   ldapOpts: { url: 'ldap://ldap.forumsys.com' },
   userDn: 'uid=gauss,dc=example,dc=com',
   userPassword: 'password',
+  userSearchBase: 'dc=example,dc=com',
+  usernameAttribute: 'uid',
+  username: 'gauss',
+})
+```
+
+#### User exists verification and return user details
+
+```javascript
+let authenticated = await authenticate({
+  ldapOpts: { url: 'ldap://ldap.forumsys.com' },
+  userDn: 'uid=gauss,dc=example,dc=com',
+  verifyUserExists : true,
   userSearchBase: 'dc=example,dc=com',
   usernameAttribute: 'uid',
   username: 'gauss',
@@ -139,7 +155,8 @@ auth()
 - `adminPassword`: The password of the admin.
 - `userDn`: The DN of the user to be authenticated. This is only needed if `adminDn` and `adminPassword` are not provided.
   Example: `uid=gauss,dc=example,dc=com`
-- `userPassword`: The password of the user,
+- `userPassword`: The password of the user
+-  `verifyUserExists` : if `true` user existence will be verified without password
 - `userSearchBase`: The ldap base DN to search the user. Example: `dc=example,dc=com`
 - `usernameAttribute`: The ldap search equality attribute name corresponding to the user's username.
   It will be used with the value in `username` to construct an ldap filter as `({attribute}={username})`
