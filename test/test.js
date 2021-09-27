@@ -8,7 +8,7 @@ describe('ldap-authentication test', () => {
       },
       adminDn: 'cn=read-only-admin,dc=example,dc=com',
       adminPassword: 'password',
-      verifyUserExists : true,
+      verifyUserExists: true,
       userSearchBase: 'dc=example,dc=com',
       usernameAttribute: 'uid',
       username: 'gauss',
@@ -293,14 +293,14 @@ describe('ldap-authentication negative test', () => {
     let options = {
       ldapOpts: {
         url: 'ldap://x.forumsys.com',
-        connectTimeout: 2000
+        connectTimeout: 2000,
       },
       userDn: 'uid=einstein,dc=example,dc=com',
       userPassword: 'password',
       usernameAttribute: 'cn',
       userSearchBase: 'dc=example,dc=com',
       username: 'einstein',
-      starttls: true
+      starttls: true,
     }
     try {
       await authenticate(options)
