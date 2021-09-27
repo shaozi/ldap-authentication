@@ -70,7 +70,7 @@ let authenticated = await authenticate({
 })
 ```
 
-#### User exists verification and return user details
+#### User exists verification and return user details (without user's password)
 
 ```javascript
 let authenticated = await authenticate({
