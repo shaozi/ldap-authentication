@@ -1,6 +1,22 @@
 const { authenticate, LdapAuthenticationError } = require('../index.js')
 
 describe('ldap-authentication test', () => {
+  it('Use an admin user to check if user exists', async () => {
+    let options = {
+      ldapOpts: {
+        url: 'ldap://ldap.forumsys.com',
+      },
+      adminDn: 'cn=read-only-admin,dc=example,dc=com',
+      adminPassword: 'password',
+      verifyUserExists: true,
+      userSearchBase: 'dc=example,dc=com',
+      usernameAttribute: 'uid',
+      username: 'gauss',
+    }
+    let user = await authenticate(options)
+    expect(user).toBeTruthy()
+    expect(user.uid).toEqual('gauss')
+  })
   it('Use an admin user to authenticate a regular user', async () => {
     let options = {
       ldapOpts: {
@@ -57,6 +73,7 @@ describe('ldap-authentication test', () => {
       groupsSearchBase: 'dc=example,dc=com',
       groupClass: 'groupOfUniqueNames',
       groupMemberAttribute: 'uniqueMember',
+      groupMemberUserAttribute: 'dn',
     }
     let user = await authenticate(options)
     expect(user).toBeTruthy()
@@ -75,12 +92,13 @@ describe('ldap-authentication test', () => {
       groupsSearchBase: 'dc=example,dc=com',
       groupClass: 'groupOfUniqueNames',
       groupMemberAttribute: 'uniqueMember',
+      groupMemberUserAttribute: 'dn',
     }
     let user = await authenticate(options)
     expect(user).toBeTruthy()
     expect(user.groups.length).toBeGreaterThan(0)
   })
-  it('Not specifying groupMemberAttribute should not cause an error and fallback do default value', async () => {
+  it('Not specifying groupMemberAttribute or groupMemberUserAttribute should not cause an error and fallback to default values', async () => {
     let options = {
       ldapOpts: {
         url: 'ldap://ldap.forumsys.com',
@@ -275,14 +293,14 @@ describe('ldap-authentication negative test', () => {
     let options = {
       ldapOpts: {
         url: 'ldap://x.forumsys.com',
-		connectTimeout: 2000
+        connectTimeout: 2000,
       },
       userDn: 'uid=einstein,dc=example,dc=com',
       userPassword: 'password',
       usernameAttribute: 'cn',
       userSearchBase: 'dc=example,dc=com',
-	  username: 'einstein',
-	  starttls: true
+      username: 'einstein',
+      starttls: true,
     }
     try {
       await authenticate(options)
@@ -290,5 +308,24 @@ describe('ldap-authentication negative test', () => {
       e = error
     }
     expect(e).toBeTruthy()
+  })
+  it('Unmatched supplied groupMemberUserAttribute should return empty group list', async () => {
+    let options = {
+      ldapOpts: {
+        url: 'ldap://ldap.forumsys.com',
+      },
+      userDn: 'uid=gauss,dc=example,dc=com',
+      userPassword: 'password',
+      userSearchBase: 'dc=example,dc=com',
+      usernameAttribute: 'uid',
+      username: 'gauss',
+      groupsSearchBase: 'dc=example,dc=com',
+      groupClass: 'groupOfUniqueNames',
+      groupMemberAttribute: 'uniqueMember',
+      groupMemberUserAttribute: 'notARealGroupMemberUserAttribute',
+    }
+    let user = await authenticate(options)
+    expect(user).toBeTruthy()
+    expect(user.groups.length).toBeLessThan(1)
   })
 })
