@@ -3,6 +3,7 @@
   "version": "2.2.9",
   "description": "A simple async nodejs library for LDAP user authentication",
   "main": "index.js",
+  "types": "./index.d.ts",
   "scripts": {
     "test": "node test/jasmine.js"
   },
