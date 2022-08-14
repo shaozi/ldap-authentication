@@ -35,27 +35,26 @@ function _ldapBind(dn, password, starttls, ldapOpts) {
           resolve(client)
         })
       }
-    });
+    })
 
     //Fix for issue https://github.com/shaozi/ldap-authentication/issues/13
     client.on('timeout', (err) => {
-      reject(err);
-    });
+      reject(err)
+    })
     client.on('connectTimeout', (err) => {
-      reject(err);
-    });
+      reject(err)
+    })
     client.on('error', (err) => {
-      reject(err);
-    });
+      reject(err)
+    })
 
-    client.on('connectError', function(error){
+    client.on('connectError', function (error) {
       if (error) {
         reject(error)
         return
       }
-    });
-
-  });
+    })
+  })
 }
 
 // search a user and return the object
@@ -63,46 +62,48 @@ async function _searchUser(
   ldapClient,
   searchBase,
   usernameAttribute,
-  username
+  username,
+  attributes = null
 ) {
   return new Promise(function (resolve, reject) {
     var filter = new ldap.filters.EqualityFilter({
       attribute: usernameAttribute,
       value: username,
     })
-    ldapClient.search(
-      searchBase,
-      {
-        filter: filter,
-        scope: 'sub',
-      },
-      function (err, res) {
-        var user = null
-        if (err) {
-          reject(err)
-          ldapClient.unbind()
-          return
-        }
-        res.on('searchEntry', function (entry) {
-          user = entry.object
-        })
-        res.on('searchReference', function (referral) {
-          console.log('referral: ' + referral.uris.join())
-        })
-        res.on('error', function (err) {
-          reject(err)
-          ldapClient.unbind()
-        })
-        res.on('end', function (result) {
-          if (result.status != 0) {
-            reject(new Error('ldap search status is not 0, search failed'))
-          } else {
-            resolve(user)
-          }
-          ldapClient.unbind()
-        })
+    let searchOptions = {
+      filter: filter,
+      scope: 'sub',
+      attributes: attributes,
+    }
+    if (attributes) {
+      searchOptions.attributes = attributes
+    }
+    ldapClient.search(searchBase, searchOptions, function (err, res) {
+      var user = null
+      if (err) {
+        reject(err)
+        ldapClient.unbind()
+        return
       }
-    )
+      res.on('searchEntry', function (entry) {
+        user = entry.object
+      })
+      res.on('searchReference', function (referral) {
+        console.log('referral: ' + referral.uris.join())
+      })
+      res.on('error', function (err) {
+        reject(err)
+        ldapClient.unbind()
+      })
+      res.on('end', function (result) {
+        if (result.status != 0) {
+          reject(new Error('ldap search status is not 0, search failed'))
+        } else {
+          resolve(user)
+        }
+        ldapClient.unbind()
+      })
+    })
   })
 }
 
@@ -164,7 +165,8 @@ async function authenticateWithAdmin(
   groupsSearchBase,
   groupClass,
   groupMemberAttribute = 'member',
-  groupMemberUserAttribute
+  groupMemberUserAttribute = 'dn',
+  attributes = null
 ) {
   var ldapAdminClient
   try {
@@ -181,7 +183,8 @@ async function authenticateWithAdmin(
     ldapAdminClient,
     userSearchBase,
     usernameAttribute,
-    username
+    username,
+    attributes
   )
   ldapAdminClient.unbind()
   if (!user || !user.dn) {
@@ -237,7 +240,8 @@ async function authenticateWithUser(
   groupsSearchBase,
   groupClass,
   groupMemberAttribute = 'member',
-  groupMemberUserAttribute
+  groupMemberUserAttribute = 'dn',
+  attributes = null
 ) {
   let ldapUserClient
   try {
@@ -254,7 +258,8 @@ async function authenticateWithUser(
     ldapUserClient,
     userSearchBase,
     usernameAttribute,
-    username
+    username,
+    attributes
   )
   if (!user || !user.dn) {
     ldapOpts.log &&
@@ -297,7 +302,8 @@ async function verifyUserExists(
   groupsSearchBase,
   groupClass,
   groupMemberAttribute = 'member',
-  groupMemberUserAttribute
+  groupMemberUserAttribute = 'dn',
+  attributes = null
 ) {
   var ldapAdminClient
   try {
@@ -314,7 +320,8 @@ async function verifyUserExists(
     ldapAdminClient,
     userSearchBase,
     usernameAttribute,
-    username
+    username,
+    attributes
   )
   ldapAdminClient.unbind()
   if (!user || !user.dn) {
@@ -406,7 +413,8 @@ async function authenticate(options) {
       options.groupsSearchBase,
       options.groupClass,
       options.groupMemberAttribute,
-      options.groupMemberUserAttribute
+      options.groupMemberUserAttribute,
+      options.attributes
     )
   }
   assert(options.userDn, 'adminDn/adminPassword OR userDn must be provided')
@@ -421,7 +429,8 @@ async function authenticate(options) {
     options.groupsSearchBase,
     options.groupClass,
     options.groupMemberAttribute,
-    options.groupMemberUserAttribute
+    options.groupMemberUserAttribute,
+    options.attributes
   )
 }
 

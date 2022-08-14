@@ -9,7 +9,7 @@ Make authentication with an LDAP server easy.
 
 ## Description
 
-This library use `ldapjs` as the underneath library. It has two modes of authentications:
+This library use `ldapjs` as the underneath library. It has three modes of authentications:
 
 1. **Admin authenticate mode**. If an admin user is provided, the library will login (ldap bind) with the admin user,
    then search for the user to be authenticated, get its DN (distinguish name), then use
@@ -24,7 +24,7 @@ This library use `ldapjs` as the underneath library. It has two modes of authent
    then does a search on the user and return the user's details.
 
 3. **Verify user exists**. If an `verifyUserExists : true` is provided, the library will login (ldap bind) with the admin user,
-      then search for the user to be verified. If the user exists, user details will be returned (without verifying the user's password).
+   then search for the user to be verified. If the user exists, user details will be returned (without verifying the user's password).
 
 ## Features
 
@@ -67,6 +67,7 @@ let authenticated = await authenticate({
   userSearchBase: 'dc=example,dc=com',
   usernameAttribute: 'uid',
   username: 'gauss',
+  attributes: ['dn', 'sn', 'cn'],
 })
 ```
 
@@ -76,7 +77,7 @@ let authenticated = await authenticate({
 let authenticated = await authenticate({
   ldapOpts: { url: 'ldap://ldap.forumsys.com' },
   userDn: 'uid=gauss,dc=example,dc=com',
-  verifyUserExists : true,
+  verifyUserExists: true,
   userSearchBase: 'dc=example,dc=com',
   usernameAttribute: 'uid',
   username: 'gauss',
@@ -156,7 +157,7 @@ auth()
 - `userDn`: The DN of the user to be authenticated. This is only needed if `adminDn` and `adminPassword` are not provided.
   Example: `uid=gauss,dc=example,dc=com`
 - `userPassword`: The password of the user
--  `verifyUserExists` : if `true` user existence will be verified without password
+- `verifyUserExists` : if `true` user existence will be verified without password
 - `userSearchBase`: The ldap base DN to search the user. Example: `dc=example,dc=com`
 - `usernameAttribute`: The ldap search equality attribute name corresponding to the user's username.
   It will be used with the value in `username` to construct an ldap filter as `({attribute}={username})`
@@ -168,6 +169,8 @@ auth()
 - `username`: The username to authenticate with. It is used together with the name in `usernameAttribute`
   to construct an ldap filter as `({attribute}={username})`
   to find the user and get user details in LDAP. Example: `some user input`
+- `attributes`: A list of attributes of a user details to be returned from the LDAP server.
+  If is set to `[]` or ommited, all details will be returned. Example: `['sn', 'cn']`
 - `starttls`: Boolean. Use `STARTTLS` or not
 - `groupsSearchBase`: if specified with groupClass, will serve as search base for authenticated user groups
 - `groupClass`: if specified with groupsSearchBase, will be used as objectClass in search filter for authenticated user groups
