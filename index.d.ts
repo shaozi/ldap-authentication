@@ -21,12 +21,13 @@ declare module 'ldap-authentication' {
     groupMemberAttribute?: string
     groupMemberUserAttribute?: string
     userPassword?: string
+    attributes?: string[]
   }
-  
+
   export function authenticate(options: AuthenticationOptions): Promise<any>
-  
+
   export class LdapAuthenticationError extends Error {
     constructor(message: any)
     name: string
-  }  
+  }
 }

@@ -33,6 +33,25 @@ describe('ldap-authentication test', () => {
     expect(user).toBeTruthy()
     expect(user.uid).toEqual('gauss')
   })
+  it('Use an admin user to authenticate a regular user and return attrubutes', async () => {
+    let options = {
+      ldapOpts: {
+        url: 'ldap://ldap.forumsys.com',
+      },
+      adminDn: 'cn=read-only-admin,dc=example,dc=com',
+      adminPassword: 'password',
+      userPassword: 'password',
+      userSearchBase: 'dc=example,dc=com',
+      usernameAttribute: 'uid',
+      username: 'gauss',
+      attributes: ['uid', 'sn'],
+    }
+    let user = await authenticate(options)
+    expect(user).toBeTruthy()
+    expect(user.uid).toEqual('gauss')
+    expect(user.sn).toEqual('Gauss')
+    expect(user.cn).toBeUndefined()
+  })
   it('Use an regular user to authenticate iteself', async () => {
     let options = {
       ldapOpts: {
@@ -47,6 +66,24 @@ describe('ldap-authentication test', () => {
     let user = await authenticate(options)
     expect(user).toBeTruthy()
     expect(user.uid).toEqual('einstein')
+  })
+  it('Use an regular user to authenticate iteself and return attributes', async () => {
+    let options = {
+      ldapOpts: {
+        url: 'ldap://ldap.forumsys.com',
+      },
+      userDn: 'uid=einstein,dc=example,dc=com',
+      userPassword: 'password',
+      userSearchBase: 'dc=example,dc=com',
+      usernameAttribute: 'uid',
+      username: 'einstein',
+      attributes: ['uid', 'sn'],
+    }
+    let user = await authenticate(options)
+    expect(user).toBeTruthy()
+    expect(user.uid).toEqual('einstein')
+    expect(user.sn).toEqual('Einstein')
+    expect(user.cn).toBeUndefined()
   })
   it('Use an regular user to authenticate iteself without search', async () => {
     let options = {
