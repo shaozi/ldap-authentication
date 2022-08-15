@@ -89,7 +89,12 @@ async function _searchUser(
         user = entry.object
       })
       res.on('searchReference', function (referral) {
-        console.log('referral: ' + referral.uris.join())
+        // TODO: we don't support reference yet
+        // If the server was able to locate the entry referred to by the baseObject
+        // but could not search one or more non-local entries,
+        // the server may return one or more SearchResultReference messages,
+        // each containing a reference to another set of servers for continuing the operation.
+        // referral.uris
       })
       res.on('error', function (err) {
         reject(err)
@@ -133,9 +138,7 @@ async function _searchUserGroups(
         res.on('searchEntry', function (entry) {
           groups.push(entry.object)
         })
-        res.on('searchReference', function (referral) {
-          console.log('referral: ' + referral.uris.join())
-        })
+        res.on('searchReference', function (referral) {})
         res.on('error', function (err) {
           reject(err)
           ldapClient.unbind()
