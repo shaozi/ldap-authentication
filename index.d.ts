@@ -1,13 +1,8 @@
+import { ClientOptions } from 'ldapjs'
+
 declare module 'ldap-authentication' {
-  type LDAPOpts = {
-    url: string
-    tlsOptions?: {
-      rejectUnauthorized: boolean
-    }
-    connectTimeout?: number
-  }
-  export type AuthenticationOptions = {
-    ldapOpts: LDAPOpts
+  export interface AuthenticationOptions {
+    ldapOpts: ClientOptions
     userDn?: string
     adminDn?: string
     adminPassword?: string
@@ -15,7 +10,7 @@ declare module 'ldap-authentication' {
     usernameAttribute?: string
     username?: string
     verifyUserExists?: boolean
-    starttls?: Boolean
+    starttls?: boolean
     groupsSearchBase?: string
     groupClass?: string
     groupMemberAttribute?: string
