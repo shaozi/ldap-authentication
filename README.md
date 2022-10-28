@@ -1,6 +1,6 @@
 # A Simple node Library that Authenticates a User Against an LDAP/AD Server
 
-[![Build Status](https://travis-ci.org/shaozi/ldap-authentication.svg?branch=master)](https://travis-ci.org/shaozi/ldap-authentication)
+[![Integration Tests](https://github.com/shaozi/ldap-authentication/actions/workflows/integration-test.yml/badge.svg)](https://github.com/shaozi/ldap-authentication/actions/workflows/integration-test.yml)
 [![Known Vulnerabilities](https://snyk.io/test/github/shaozi/ldap-authentication/badge.svg?targetFile=package.json)](https://snyk.io/test/github/shaozi/ldap-authentication?targetFile=package.json)
 
 ## Goal
