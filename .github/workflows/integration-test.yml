@@ -20,13 +20,25 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
+      - name: Install LDAP tools
+        run: sudo apt-get install -y ldap-utils
+
       - name: Start containers
         run: docker-compose -f "docker-compose.yml" up -d
-        
-      - name: Sleep 10s
-        run: sleep 10s
-        shell: bash
-        
+
+      - name: Wait for LDAP server to become available
+        uses: nick-fields/retry@v2
+        with:
+          timeout_minutes: 5
+          max_attempts: 10
+          polling_interval_seconds: 3
+          command: |
+            ldapsearch -LLL -o 'ldif-wrap=no' \
+              -H ldap://localhost:1389 \
+              -D 'cn=read-only-admin,dc=example,dc=com' \
+              -w password \
+              -b 'cn=einstein,ou=users,dc=example,dc=com' DN
+
       - name: Use Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v3
         with:
