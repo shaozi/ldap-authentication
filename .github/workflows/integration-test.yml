@@ -22,7 +22,11 @@ jobs:
 
       - name: Start containers
         run: docker-compose -f "docker-compose.yml" up -d
-
+        
+      - name: Sleep 10s
+        run: sleep 10s
+        shell: bash
+        
       - name: Use Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v3
         with:
