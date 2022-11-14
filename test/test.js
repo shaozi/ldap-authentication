@@ -4,7 +4,7 @@ describe('ldap-authentication test', () => {
   it('Use an admin user to check if user exists', async () => {
     let options = {
       ldapOpts: {
-        url: 'ldap://ldap.forumsys.com',
+        url: 'ldap://localhost:1389',
       },
       adminDn: 'cn=read-only-admin,dc=example,dc=com',
       adminPassword: 'password',
@@ -13,6 +13,7 @@ describe('ldap-authentication test', () => {
       usernameAttribute: 'uid',
       username: 'gauss',
     }
+
     let user = await authenticate(options)
     expect(user).toBeTruthy()
     expect(user.uid).toEqual('gauss')
@@ -20,7 +21,7 @@ describe('ldap-authentication test', () => {
   it('Use an admin user to authenticate a regular user', async () => {
     let options = {
       ldapOpts: {
-        url: 'ldap://ldap.forumsys.com',
+        url: 'ldap://localhost:1389',
       },
       adminDn: 'cn=read-only-admin,dc=example,dc=com',
       adminPassword: 'password',
@@ -29,6 +30,7 @@ describe('ldap-authentication test', () => {
       usernameAttribute: 'uid',
       username: 'gauss',
     }
+
     let user = await authenticate(options)
     expect(user).toBeTruthy()
     expect(user.uid).toEqual('gauss')
@@ -36,7 +38,7 @@ describe('ldap-authentication test', () => {
   it('Use an admin user to authenticate a regular user and return attrubutes', async () => {
     let options = {
       ldapOpts: {
-        url: 'ldap://ldap.forumsys.com',
+        url: 'ldap://localhost:1389',
       },
       adminDn: 'cn=read-only-admin,dc=example,dc=com',
       adminPassword: 'password',
@@ -46,23 +48,25 @@ describe('ldap-authentication test', () => {
       username: 'gauss',
       attributes: ['uid', 'sn'],
     }
+
     let user = await authenticate(options)
     expect(user).toBeTruthy()
     expect(user.uid).toEqual('gauss')
-    expect(user.sn).toEqual('Gauss')
+    expect(user.sn).toEqual('Bar1')
     expect(user.cn).toBeUndefined()
   })
   it('Use an regular user to authenticate iteself', async () => {
     let options = {
       ldapOpts: {
-        url: 'ldap://ldap.forumsys.com',
+        url: 'ldap://localhost:1389',
       },
-      userDn: 'uid=einstein,dc=example,dc=com',
+      userDn: 'cn=einstein,ou=users,dc=example,dc=com',
       userPassword: 'password',
       userSearchBase: 'dc=example,dc=com',
       usernameAttribute: 'uid',
       username: 'einstein',
     }
+
     let user = await authenticate(options)
     expect(user).toBeTruthy()
     expect(user.uid).toEqual('einstein')
@@ -70,36 +74,38 @@ describe('ldap-authentication test', () => {
   it('Use an regular user to authenticate iteself and return attributes', async () => {
     let options = {
       ldapOpts: {
-        url: 'ldap://ldap.forumsys.com',
+        url: 'ldap://localhost:1389',
       },
-      userDn: 'uid=einstein,dc=example,dc=com',
+      userDn: 'cn=einstein,ou=users,dc=example,dc=com',
       userPassword: 'password',
       userSearchBase: 'dc=example,dc=com',
       usernameAttribute: 'uid',
       username: 'einstein',
       attributes: ['uid', 'sn'],
     }
+
     let user = await authenticate(options)
     expect(user).toBeTruthy()
     expect(user.uid).toEqual('einstein')
-    expect(user.sn).toEqual('Einstein')
+    expect(user.sn).toEqual('Bar2')
     expect(user.cn).toBeUndefined()
   })
   it('Use an regular user to authenticate iteself without search', async () => {
     let options = {
       ldapOpts: {
-        url: 'ldap://ldap.forumsys.com',
+        url: 'ldap://localhost:1389',
       },
-      userDn: 'uid=einstein,dc=example,dc=com',
+      userDn: 'cn=einstein,ou=users,dc=example,dc=com',
       userPassword: 'password',
     }
+
     let user = await authenticate(options)
     expect(user).toBeTruthy()
   })
   it('Use an admin user to authenticate a regular user and fetch user group information', async () => {
     let options = {
       ldapOpts: {
-        url: 'ldap://ldap.forumsys.com',
+        url: 'ldap://localhost:1389',
       },
       adminDn: 'cn=read-only-admin,dc=example,dc=com',
       adminPassword: 'password',
@@ -108,10 +114,11 @@ describe('ldap-authentication test', () => {
       usernameAttribute: 'uid',
       username: 'gauss',
       groupsSearchBase: 'dc=example,dc=com',
-      groupClass: 'groupOfUniqueNames',
-      groupMemberAttribute: 'uniqueMember',
+      groupClass: 'groupOfNames',
+      groupMemberAttribute: 'member',
       groupMemberUserAttribute: 'dn',
     }
+
     let user = await authenticate(options)
     expect(user).toBeTruthy()
     expect(user.groups.length).toBeGreaterThan(0)
@@ -119,18 +126,19 @@ describe('ldap-authentication test', () => {
   it('Use regular user to authenticate and fetch user group information', async () => {
     let options = {
       ldapOpts: {
-        url: 'ldap://ldap.forumsys.com',
+        url: 'ldap://localhost:1389',
       },
-      userDn: 'uid=gauss,dc=example,dc=com',
+      userDn: 'cn=gauss,ou=users,dc=example,dc=com',
       userPassword: 'password',
       userSearchBase: 'dc=example,dc=com',
       usernameAttribute: 'uid',
       username: 'gauss',
       groupsSearchBase: 'dc=example,dc=com',
-      groupClass: 'groupOfUniqueNames',
-      groupMemberAttribute: 'uniqueMember',
+      groupClass: 'groupOfNames',
+      groupMemberAttribute: 'member',
       groupMemberUserAttribute: 'dn',
     }
+
     let user = await authenticate(options)
     expect(user).toBeTruthy()
     expect(user.groups.length).toBeGreaterThan(0)
@@ -138,9 +146,9 @@ describe('ldap-authentication test', () => {
   it('Not specifying groupMemberAttribute or groupMemberUserAttribute should not cause an error and fallback to default values', async () => {
     let options = {
       ldapOpts: {
-        url: 'ldap://ldap.forumsys.com',
+        url: 'ldap://localhost:1389',
       },
-      userDn: 'uid=gauss,dc=example,dc=com',
+      userDn: 'cn=gauss,ou=users,dc=example,dc=com',
       userPassword: 'password',
       userSearchBase: 'dc=example,dc=com',
       usernameAttribute: 'uid',
@@ -148,6 +156,7 @@ describe('ldap-authentication test', () => {
       groupsSearchBase: 'dc=example,dc=com',
       groupClass: 'groupOfUniqueNames',
     }
+
     let user = await authenticate(options)
     expect(user).toBeTruthy()
     expect(user.groups.length).toBeLessThan(1)
@@ -158,7 +167,7 @@ describe('ldap-authentication negative test', () => {
   it('wrong admin user should fail', async () => {
     let options = {
       ldapOpts: {
-        url: 'ldap://ldap.forumsys.com',
+        url: 'ldap://localhost:1389',
       },
       adminDn: 'cn=not-exist,dc=example,dc=com',
       adminPassword: 'password',
@@ -167,18 +176,20 @@ describe('ldap-authentication negative test', () => {
       usernameAttribute: 'uid',
       username: 'gauss',
     }
+
     let e = null
     try {
       await authenticate(options)
     } catch (error) {
       e = error
     }
+
     expect(e).toBeTruthy()
   })
   it('wrong admin password should fail', async () => {
     let options = {
       ldapOpts: {
-        url: 'ldap://ldap.forumsys.com',
+        url: 'ldap://localhost:1389',
       },
       adminDn: 'cn=read-only-admin,dc=example,dc=com',
       adminPassword: '',
@@ -187,18 +198,20 @@ describe('ldap-authentication negative test', () => {
       usernameAttribute: 'uid',
       username: 'gauss',
     }
+
     let e = null
     try {
       await authenticate(options)
     } catch (error) {
       e = error
     }
+
     expect(e).toBeTruthy()
   })
   it('admin auth wrong username should fail', async () => {
     let options = {
       ldapOpts: {
-        url: 'ldap://ldap.forumsys.com',
+        url: 'ldap://localhost:1389',
       },
       adminDn: 'cn=read-only-admin,dc=example,dc=com',
       adminPassword: 'password',
@@ -207,18 +220,20 @@ describe('ldap-authentication negative test', () => {
       usernameAttribute: 'uid',
       username: 'wrong',
     }
+
     let e = null
     try {
       await authenticate(options)
     } catch (error) {
       e = error
     }
+
     expect(e).toBeTruthy()
   })
   it('admin auth wrong user password should fail', async () => {
     let options = {
       ldapOpts: {
-        url: 'ldap://ldap.forumsys.com',
+        url: 'ldap://localhost:1389',
       },
       adminDn: 'cn=read-only-admin,dc=example,dc=com',
       adminPassword: 'password',
@@ -227,18 +242,20 @@ describe('ldap-authentication negative test', () => {
       usernameAttribute: 'uid',
       username: 'gauss',
     }
+
     let e = null
     try {
       await authenticate(options)
     } catch (error) {
       e = error
     }
+
     expect(e).toBeTruthy()
   })
   it('user auth wrong username should fail', async () => {
     let options = {
       ldapOpts: {
-        url: 'ldap://ldap.forumsys.com',
+        url: 'ldap://localhost:1389',
       },
       userDn: 'cn=not-exist,dc=example,dc=com',
       userPassword: 'password',
@@ -246,18 +263,20 @@ describe('ldap-authentication negative test', () => {
       usernameAttribute: 'uid',
       username: 'gauss',
     }
+
     let e = null
     try {
       await authenticate(options)
     } catch (error) {
       e = error
     }
+
     expect(e).toBeTruthy()
   })
   it('user auth wrong user password should fail', async () => {
     let options = {
       ldapOpts: {
-        url: 'ldap://ldap.forumsys.com',
+        url: 'ldap://localhost:1389',
       },
       userDn: 'cn=gauss,dc=example,dc=com',
       userPassword: 'wrongpassword',
@@ -265,45 +284,51 @@ describe('ldap-authentication negative test', () => {
       usernameAttribute: 'uid',
       username: 'gauss',
     }
+
     let e = null
     try {
       await authenticate(options)
     } catch (error) {
       e = error
     }
+
     expect(e).toBeTruthy()
   })
   it('Use an regular user to authenticate iteself without search with wrong password should fail', async () => {
     let options = {
       ldapOpts: {
-        url: 'ldap://ldap.forumsys.com',
+        url: 'ldap://localhost:1389',
       },
       userDn: 'uid=einstein,dc=example,dc=com',
       userPassword: '',
     }
+
     try {
       await authenticate(options)
     } catch (error) {
       e = error
     }
+
     expect(e).toBeTruthy()
   })
   it('Wrong options give LdapAuthenticationError', async () => {
     let options = {
       ldapOpts: {
-        url: 'ldap://ldap.forumsys.com',
+        url: 'ldap://localhost:1389',
       },
-      userDn: 'uid=einstein,dc=example,dc=com',
+      userDn: 'cn=einstein,ou=users,dc=example,dc=com',
       userPassword: 'password',
-      usernameAttribute: 'cn',
+      usernameAttribute: 'wrongattribute',
       userSearchBase: 'dc=example,dc=com',
       username: 'einstein',
     }
+
     try {
       await authenticate(options)
     } catch (error) {
       e = error
     }
+
     expect(e).toBeTruthy()
     expect(e).toBeInstanceOf(LdapAuthenticationError)
   })
@@ -319,11 +344,13 @@ describe('ldap-authentication negative test', () => {
       userSearchBase: 'dc=example,dc=com',
       username: 'einstein',
     }
+
     try {
       await authenticate(options)
     } catch (error) {
       e = error
     }
+
     expect(e).toBeTruthy()
   })
   it('Unreachable ldap server should throw error (with starttls=true)', async () => {
@@ -339,28 +366,31 @@ describe('ldap-authentication negative test', () => {
       username: 'einstein',
       starttls: true,
     }
+
     try {
       await authenticate(options)
     } catch (error) {
       e = error
     }
+
     expect(e).toBeTruthy()
   })
   it('Unmatched supplied groupMemberUserAttribute should return empty group list', async () => {
     let options = {
       ldapOpts: {
-        url: 'ldap://ldap.forumsys.com',
+        url: 'ldap://localhost:1389',
       },
-      userDn: 'uid=gauss,dc=example,dc=com',
+      userDn: 'cn=gauss,ou=users,dc=example,dc=com',
       userPassword: 'password',
       userSearchBase: 'dc=example,dc=com',
       usernameAttribute: 'uid',
       username: 'gauss',
       groupsSearchBase: 'dc=example,dc=com',
-      groupClass: 'groupOfUniqueNames',
-      groupMemberAttribute: 'uniqueMember',
-      groupMemberUserAttribute: 'notARealGroupMemberUserAttribute',
+      groupClass: 'groupOfNames',
+      groupMemberAttribute: 'member',
+      groupMemberUserAttribute: 'dnWRONG',
     }
+
     let user = await authenticate(options)
     expect(user).toBeTruthy()
     expect(user.groups.length).toBeLessThan(1)

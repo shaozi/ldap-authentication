@@ -1,0 +1,13 @@
+version: "3"
+services:
+  ldap:
+    image: bitnami/openldap:2.6.3
+    ports:
+      - '1389:1389'
+      - '1636:1636'
+    environment:
+      - LDAP_ROOT=dc=example,dc=com
+      - LDAP_ADMIN_USERNAME=read-only-admin
+      - LDAP_ADMIN_PASSWORD=password
+      - LDAP_USERS=gauss,einstein
+      - LDAP_PASSWORDS=password,password
