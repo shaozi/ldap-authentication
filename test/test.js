@@ -1,10 +1,11 @@
 const { authenticate, LdapAuthenticationError } = require('../index.js')
+const url = 'ldap://ldap:1389'
 
 describe('ldap-authentication test', () => {
   it('Use an admin user to check if user exists', async () => {
     let options = {
       ldapOpts: {
-        url: 'ldap://localhost:1389',
+        url: url,
       },
       adminDn: 'cn=read-only-admin,dc=example,dc=com',
       adminPassword: 'password',
@@ -21,7 +22,7 @@ describe('ldap-authentication test', () => {
   it('Use an admin user to authenticate a regular user', async () => {
     let options = {
       ldapOpts: {
-        url: 'ldap://localhost:1389',
+        url: url,
       },
       adminDn: 'cn=read-only-admin,dc=example,dc=com',
       adminPassword: 'password',
@@ -38,7 +39,7 @@ describe('ldap-authentication test', () => {
   it('Use an admin user to authenticate a regular user and return attrubutes', async () => {
     let options = {
       ldapOpts: {
-        url: 'ldap://localhost:1389',
+        url: url,
       },
       adminDn: 'cn=read-only-admin,dc=example,dc=com',
       adminPassword: 'password',
@@ -58,7 +59,7 @@ describe('ldap-authentication test', () => {
   it('Use an regular user to authenticate iteself', async () => {
     let options = {
       ldapOpts: {
-        url: 'ldap://localhost:1389',
+        url: url,
       },
       userDn: 'cn=einstein,ou=users,dc=example,dc=com',
       userPassword: 'password',
@@ -74,7 +75,7 @@ describe('ldap-authentication test', () => {
   it('Use an regular user to authenticate iteself and return attributes', async () => {
     let options = {
       ldapOpts: {
-        url: 'ldap://localhost:1389',
+        url: url,
       },
       userDn: 'cn=einstein,ou=users,dc=example,dc=com',
       userPassword: 'password',
@@ -93,7 +94,7 @@ describe('ldap-authentication test', () => {
   it('Use an regular user to authenticate iteself without search', async () => {
     let options = {
       ldapOpts: {
-        url: 'ldap://localhost:1389',
+        url: url,
       },
       userDn: 'cn=einstein,ou=users,dc=example,dc=com',
       userPassword: 'password',
@@ -105,7 +106,7 @@ describe('ldap-authentication test', () => {
   it('Use an admin user to authenticate a regular user and fetch user group information', async () => {
     let options = {
       ldapOpts: {
-        url: 'ldap://localhost:1389',
+        url: url,
       },
       adminDn: 'cn=read-only-admin,dc=example,dc=com',
       adminPassword: 'password',
@@ -126,7 +127,7 @@ describe('ldap-authentication test', () => {
   it('Use regular user to authenticate and fetch user group information', async () => {
     let options = {
       ldapOpts: {
-        url: 'ldap://localhost:1389',
+        url: url,
       },
       userDn: 'cn=gauss,ou=users,dc=example,dc=com',
       userPassword: 'password',
@@ -146,7 +147,7 @@ describe('ldap-authentication test', () => {
   it('Not specifying groupMemberAttribute or groupMemberUserAttribute should not cause an error and fallback to default values', async () => {
     let options = {
       ldapOpts: {
-        url: 'ldap://localhost:1389',
+        url: url,
       },
       userDn: 'cn=gauss,ou=users,dc=example,dc=com',
       userPassword: 'password',
@@ -167,7 +168,7 @@ describe('ldap-authentication negative test', () => {
   it('wrong admin user should fail', async () => {
     let options = {
       ldapOpts: {
-        url: 'ldap://localhost:1389',
+        url: url,
       },
       adminDn: 'cn=not-exist,dc=example,dc=com',
       adminPassword: 'password',
@@ -189,7 +190,7 @@ describe('ldap-authentication negative test', () => {
   it('wrong admin password should fail', async () => {
     let options = {
       ldapOpts: {
-        url: 'ldap://localhost:1389',
+        url: url,
       },
       adminDn: 'cn=read-only-admin,dc=example,dc=com',
       adminPassword: '',
@@ -211,7 +212,7 @@ describe('ldap-authentication negative test', () => {
   it('admin auth wrong username should fail', async () => {
     let options = {
       ldapOpts: {
-        url: 'ldap://localhost:1389',
+        url: url,
       },
       adminDn: 'cn=read-only-admin,dc=example,dc=com',
       adminPassword: 'password',
@@ -233,7 +234,7 @@ describe('ldap-authentication negative test', () => {
   it('admin auth wrong user password should fail', async () => {
     let options = {
       ldapOpts: {
-        url: 'ldap://localhost:1389',
+        url: url,
       },
       adminDn: 'cn=read-only-admin,dc=example,dc=com',
       adminPassword: 'password',
@@ -255,7 +256,7 @@ describe('ldap-authentication negative test', () => {
   it('user auth wrong username should fail', async () => {
     let options = {
       ldapOpts: {
-        url: 'ldap://localhost:1389',
+        url: url,
       },
       userDn: 'cn=not-exist,dc=example,dc=com',
       userPassword: 'password',
@@ -276,7 +277,7 @@ describe('ldap-authentication negative test', () => {
   it('user auth wrong user password should fail', async () => {
     let options = {
       ldapOpts: {
-        url: 'ldap://localhost:1389',
+        url: url,
       },
       userDn: 'cn=gauss,dc=example,dc=com',
       userPassword: 'wrongpassword',
@@ -297,7 +298,7 @@ describe('ldap-authentication negative test', () => {
   it('Use an regular user to authenticate iteself without search with wrong password should fail', async () => {
     let options = {
       ldapOpts: {
-        url: 'ldap://localhost:1389',
+        url: url,
       },
       userDn: 'uid=einstein,dc=example,dc=com',
       userPassword: '',
@@ -314,7 +315,7 @@ describe('ldap-authentication negative test', () => {
   it('Wrong options give LdapAuthenticationError', async () => {
     let options = {
       ldapOpts: {
-        url: 'ldap://localhost:1389',
+        url: url,
       },
       userDn: 'cn=einstein,ou=users,dc=example,dc=com',
       userPassword: 'password',
@@ -378,7 +379,7 @@ describe('ldap-authentication negative test', () => {
   it('Unmatched supplied groupMemberUserAttribute should return empty group list', async () => {
     let options = {
       ldapOpts: {
-        url: 'ldap://localhost:1389',
+        url: url,
       },
       userDn: 'cn=gauss,ou=users,dc=example,dc=com',
       userPassword: 'password',
