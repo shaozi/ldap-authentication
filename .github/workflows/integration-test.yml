@@ -1,11 +1,14 @@
-name: "Integration Tests"
+name: 'Integration Tests'
+
+env:
+  INGITHUB: true
 
 on:
   push:
     paths-ignore:
-      - "README.md"
-      - "LICENSE"
-      - "SECURITY.md"
+      - 'README.md'
+      - 'LICENSE'
+      - 'SECURITY.md'
   pull_request:
 
 jobs:
@@ -15,7 +18,7 @@ jobs:
       matrix:
         node-version: [12.x, 14.x, 15.x, 16.x, 17.x, 18.x]
 
-    name: "Integration Node v${{ matrix.node-version }}"
+    name: 'Integration Node v${{ matrix.node-version }}'
 
     steps:
       - uses: actions/checkout@v3
