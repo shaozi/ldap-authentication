@@ -1,5 +1,6 @@
 const { authenticate, LdapAuthenticationError } = require('../index.js')
-const url = 'ldap://ldap:1389'
+
+const url = process.env.INGITHUB ? 'ldap://localhost:1389' : 'ldap://ldap:1389'
 
 describe('ldap-authentication test', () => {
   it('Use an admin user to check if user exists', async () => {
