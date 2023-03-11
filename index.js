@@ -87,6 +87,7 @@ async function _searchUser(
       }
       res.on('searchEntry', function (entry) {
         user = entry.object
+        user.raw = entry.raw
       })
       res.on('searchReference', function (referral) {
         // TODO: we don't support reference yet
