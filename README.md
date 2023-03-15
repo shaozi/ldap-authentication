@@ -176,3 +176,24 @@ auth()
 - `groupClass`: if specified with groupsSearchBase, will be used as objectClass in search filter for authenticated user groups
 - `groupMemberAttribute`: if specified with groupClass and groupsSearchBase, will be used as member name (if not specified this defaults to `member`) in search filter for authenticated user groups
 - `groupMemberUserAttribute`: if specified with groupClass and groupsSearchBase, will be used as the attribute on the user object (if not specified this defaults to `dn`) in search filter for authenticated user groups
+
+## Returns
+
+The user object if `authenticate()` is success.
+
+The user object has a `raw` field that has the raw data from the LDAP/AD server. It can be used to access buffer objects (profile pics for example).
+Buffer data can now be accessed by `user.raw.profilePhoto`, etc, instead of `user.profilePhoto`.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
