@@ -181,19 +181,37 @@ auth()
 
 The user object if `authenticate()` is success.
 
-The user object has a `raw` field that has the raw data from the LDAP/AD server. It can be used to access buffer objects (profile pics for example).
+In version 2, The user object has a `raw` field that has the raw data from the LDAP/AD server. It can be used to access buffer objects (profile pics for example).
+
 Buffer data can now be accessed by `user.raw.profilePhoto`, etc, instead of `user.profilePhoto`.
 
+In version 3, the `raw` field is no longer used. Instead, append `;binary` to the attributes you
+want to get back as buffer. Check the following example on how to get a user's profile photo:
 
+```javascript
+export async function verifyLogin(email: string, password: string) {
 
+  const options = {
+   //...other config options
+    userPassword: password,
+    username: email,
+    attributes: ['thumbnailPhoto;binary', 'givenName', 'sn', 'sAMAccountName', 'userPrincipalName', 'memberOf' ]
+  };
 
+  try {
+    const ldapUser = await authenticate(options);
 
+    if (!ldapUser) {
+      return { error: "user not found" };
+    }
 
+    // accessing the image
+    const profilePhoto = ldapUser['thumbnailPhoto;binary'];
 
-
-
-
-
-
-
-
+    /* using the image
+	<img src={`data:image/*;base64,${user.profilePhoto}`} />
+    */
+    return { user: ldapUser };
+  }
+}
+```

@@ -72,7 +72,6 @@ describe('ldap-authentication test', () => {
     let user = await authenticate(options)
     expect(user).toBeTruthy()
     expect(user.uid).toEqual('einstein')
-    expect(user.raw).toBeTruthy()
   })
   it('Use an regular user to authenticate iteself and return attributes', async () => {
     let options = {

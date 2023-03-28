@@ -99,7 +99,6 @@ async function _searchUser(
       }
       res.on('searchEntry', function (entry) {
         user = _searchResultToUser(entry.pojo)
-        user.raw = entry
       })
       res.on('searchReference', function (referral) {
         // TODO: we don't support reference yet
