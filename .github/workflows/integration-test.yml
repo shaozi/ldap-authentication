@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node-version: [12.x, 14.x, 15.x, 16.x, 17.x, 18.x]
+        node-version: [15.x, 16.x, 17.x, 18.x]
 
     name: 'Integration Node v${{ matrix.node-version }}'
 

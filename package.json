@@ -39,6 +39,6 @@
     "ldapjs": "^3.0.1"
   },
   "devDependencies": {
-    "jasmine": "^4.5.0"
+    "jasmine": "^4.6.0"
   }
 }
