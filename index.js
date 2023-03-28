@@ -1,6 +1,18 @@
 const assert = require('assert')
 const ldap = require('ldapjs')
 
+// convert a SearchResultEntry object in ldapjs 3.0
+// to a user object to maintain backward compatibility
+
+function _searchResultToUser(pojo) {
+  assert(pojo.type == 'SearchResultEntry')
+  let user = { dn: pojo.objectName }
+  pojo.attributes.forEach((attribute) => {
+    user[attribute.type] =
+      attribute.values.length == 1 ? attribute.values[0] : attribute.values
+  })
+  return user
+}
 // bind and return the ldap client
 function _ldapBind(dn, password, starttls, ldapOpts) {
   return new Promise(function (resolve, reject) {
@@ -86,8 +98,7 @@ async function _searchUser(
         return
       }
       res.on('searchEntry', function (entry) {
-        user = entry.object
-        user.raw = entry.raw
+        user = _searchResultToUser(entry.pojo)
       })
       res.on('searchReference', function (referral) {
         // TODO: we don't support reference yet
