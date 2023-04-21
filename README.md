@@ -2,6 +2,7 @@
 
 [![Integration Tests](https://github.com/shaozi/ldap-authentication/actions/workflows/integration-test.yml/badge.svg)](https://github.com/shaozi/ldap-authentication/actions/workflows/integration-test.yml)
 [![Known Vulnerabilities](https://snyk.io/test/github/shaozi/ldap-authentication/badge.svg?targetFile=package.json)](https://snyk.io/test/github/shaozi/ldap-authentication?targetFile=package.json)
+[![NPM Weekly Downloads](https://img.shields.io/npm/dw/ldap-authentication?logo=npm)](https://img.shields.io/npm/dw/ldap-authentication?logo=npm)
 
 ## Goal
 
