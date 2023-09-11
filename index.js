@@ -148,7 +148,7 @@ async function _searchUserGroups(
           return
         }
         res.on('searchEntry', function (entry) {
-          groups.push(entry.object)
+          groups.push(entry.pojo)
         })
         res.on('searchReference', function (referral) {})
         res.on('error', function (err) {
