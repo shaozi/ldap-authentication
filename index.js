@@ -17,7 +17,7 @@ function _searchResultToUser(pojo) {
 function _ldapBind(dn, password, starttls, ldapOpts) {
   return new Promise(function (resolve, reject) {
     ldapOpts.connectTimeout = ldapOpts.connectTimeout || 5000
-    var client = ldap.createClient(ldapOpts)
+    let client = ldap.createClient(ldapOpts)
 
     client.on('connect', function () {
       if (starttls) {
@@ -29,7 +29,6 @@ function _ldapBind(dn, password, starttls, ldapOpts) {
           client.bind(dn, password, function (err) {
             if (err) {
               reject(err)
-              client.unbind()
               return
             }
             ldapOpts.log && ldapOpts.log.trace('bind success!')
@@ -40,7 +39,6 @@ function _ldapBind(dn, password, starttls, ldapOpts) {
         client.bind(dn, password, function (err) {
           if (err) {
             reject(err)
-            client.unbind()
             return
           }
           ldapOpts.log && ldapOpts.log.trace('bind success!')
@@ -78,7 +76,7 @@ async function _searchUser(
   attributes = null
 ) {
   return new Promise(function (resolve, reject) {
-    var filter = new ldap.filters.EqualityFilter({
+    let filter = new ldap.filters.EqualityFilter({
       attribute: usernameAttribute,
       value: username,
     })
@@ -91,10 +89,9 @@ async function _searchUser(
       searchOptions.attributes = attributes
     }
     ldapClient.search(searchBase, searchOptions, function (err, res) {
-      var user = null
+      let user = null
       if (err) {
         reject(err)
-        ldapClient.unbind()
         return
       }
       res.on('searchEntry', function (entry) {
@@ -110,7 +107,6 @@ async function _searchUser(
       })
       res.on('error', function (err) {
         reject(err)
-        ldapClient.unbind()
       })
       res.on('end', function (result) {
         if (result.status != 0) {
@@ -118,7 +114,6 @@ async function _searchUser(
         } else {
           resolve(user)
         }
-        ldapClient.unbind()
       })
     })
   })
@@ -141,10 +136,9 @@ async function _searchUserGroups(
         scope: 'sub',
       },
       function (err, res) {
-        var groups = []
+        let groups = []
         if (err) {
           reject(err)
-          ldapClient.unbind()
           return
         }
         res.on('searchEntry', function (entry) {
@@ -153,7 +147,6 @@ async function _searchUserGroups(
         res.on('searchReference', function (referral) {})
         res.on('error', function (err) {
           reject(err)
-          ldapClient.unbind()
         })
         res.on('end', function (result) {
           if (result.status != 0) {
@@ -161,7 +154,6 @@ async function _searchUserGroups(
           } else {
             resolve(groups)
           }
-          ldapClient.unbind()
         })
       }
     )
@@ -183,7 +175,7 @@ async function authenticateWithAdmin(
   groupMemberUserAttribute = 'dn',
   attributes = null
 ) {
-  var ldapAdminClient
+  let ldapAdminClient
   try {
     ldapAdminClient = await _ldapBind(
       adminDn,
@@ -194,14 +186,13 @@ async function authenticateWithAdmin(
   } catch (error) {
     throw { admin: error }
   }
-  var user = await _searchUser(
+  let user = await _searchUser(
     ldapAdminClient,
     userSearchBase,
     usernameAttribute,
     username,
     attributes
   )
-  ldapAdminClient.unbind()
   if (!user || !user.dn) {
     ldapOpts.log &&
       ldapOpts.log.trace(
@@ -211,26 +202,15 @@ async function authenticateWithAdmin(
       'user not found or usernameAttribute is wrong'
     )
   }
-  var userDn = user.dn
+  let userDn = user.dn
   let ldapUserClient
   try {
     ldapUserClient = await _ldapBind(userDn, userPassword, starttls, ldapOpts)
   } catch (error) {
     throw error
   }
-  ldapUserClient.unbind()
   if (groupsSearchBase && groupClass && groupMemberAttribute) {
-    try {
-      ldapAdminClient = await _ldapBind(
-        adminDn,
-        adminPassword,
-        starttls,
-        ldapOpts
-      )
-    } catch (error) {
-      throw error
-    }
-    var groups = await _searchUserGroups(
+    let groups = await _searchUserGroups(
       ldapAdminClient,
       groupsSearchBase,
       user,
@@ -239,7 +219,6 @@ async function authenticateWithAdmin(
       groupMemberUserAttribute
     )
     user.groups = groups
-    ldapAdminClient.unbind()
   }
   return user
 }
@@ -266,10 +245,9 @@ async function authenticateWithUser(
   }
   if (!usernameAttribute || !userSearchBase) {
     // if usernameAttribute is not provided, no user detail is needed.
-    ldapUserClient.unbind()
     return true
   }
-  var user = await _searchUser(
+  let user = await _searchUser(
     ldapUserClient,
     userSearchBase,
     usernameAttribute,
@@ -285,14 +263,8 @@ async function authenticateWithUser(
       'user logged in, but user details could not be found. Probabaly usernameAttribute or userSearchBase is wrong?'
     )
   }
-  ldapUserClient.unbind()
   if (groupsSearchBase && groupClass && groupMemberAttribute) {
-    try {
-      ldapUserClient = await _ldapBind(userDn, userPassword, starttls, ldapOpts)
-    } catch (error) {
-      throw error
-    }
-    var groups = await _searchUserGroups(
+    let groups = await _searchUserGroups(
       ldapUserClient,
       groupsSearchBase,
       user,
@@ -301,7 +273,6 @@ async function authenticateWithUser(
       groupMemberUserAttribute
     )
     user.groups = groups
-    ldapUserClient.unbind()
   }
   return user
 }
@@ -320,7 +291,7 @@ async function verifyUserExists(
   groupMemberUserAttribute = 'dn',
   attributes = null
 ) {
-  var ldapAdminClient
+  let ldapAdminClient
   try {
     ldapAdminClient = await _ldapBind(
       adminDn,
@@ -331,14 +302,13 @@ async function verifyUserExists(
   } catch (error) {
     throw { admin: error }
   }
-  var user = await _searchUser(
+  let user = await _searchUser(
     ldapAdminClient,
     userSearchBase,
     usernameAttribute,
     username,
     attributes
   )
-  ldapAdminClient.unbind()
   if (!user || !user.dn) {
     ldapOpts.log &&
       ldapOpts.log.trace(
@@ -349,17 +319,7 @@ async function verifyUserExists(
     )
   }
   if (groupsSearchBase && groupClass && groupMemberAttribute) {
-    try {
-      ldapAdminClient = await _ldapBind(
-        adminDn,
-        adminPassword,
-        starttls,
-        ldapOpts
-      )
-    } catch (error) {
-      throw error
-    }
-    var groups = await _searchUserGroups(
+    let groups = await _searchUserGroups(
       ldapAdminClient,
       groupsSearchBase,
       user,
@@ -368,7 +328,6 @@ async function verifyUserExists(
       groupMemberUserAttribute
     )
     user.groups = groups
-    ldapAdminClient.unbind()
   }
   return user
 }

@@ -10,6 +10,13 @@
       "name": "Debug Example",
       "skipFiles": ["<node_internals>/**"],
       "program": "${workspaceFolder}/example/index.js"
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Debug Test",
+      "skipFiles": ["<node_internals>/**"],
+      "program": "${workspaceFolder}/test/jasmine.js"
     }
   ]
 }
