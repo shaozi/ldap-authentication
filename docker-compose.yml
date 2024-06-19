@@ -1,4 +1,3 @@
-version: "3"
 services:
   ldap:
     image: bitnami/openldap:2.6.3
