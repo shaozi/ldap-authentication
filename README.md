@@ -221,4 +221,4 @@ export async function verifyLogin(email: string, password: string) {
 
 Version 2 supports Node version 12, 14, 15, 16, 17 and 18.
 
-Version 3 supports Node version 15, 16, 17 and 18
+Version 3 supports Node version 16, 17, 18, 20 and 22,
