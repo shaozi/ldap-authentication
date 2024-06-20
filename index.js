@@ -1,6 +1,46 @@
 const assert = require('assert')
 const ldap = require('ldapjs')
 
+// convert an escaped utf8 string returned from ldapjs
+function _isHex(c) {
+  return (
+    (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F')
+  )
+}
+function _parseEscapedHexToUtf8(s) {
+  // convert 'cn=\\e7\\a0\\94\\e5\\8f\\91A\\e9\\83\\a8,ou=users,dc=example,dc=com'
+  // to 'cn=研发A部,ou=users,dc=example,dc=com'
+  let ret = Buffer.alloc(0)
+  let len = s.length
+  for (let i = 0; i < len; i++) {
+    let c = s[i]
+    let item
+    if (c == '\\' && i < len - 2 && _isHex(s[i + 1]) && _isHex(s[i + 2])) {
+      item = Buffer.from(s.substring(i + 1, i + 3), 'hex')
+      i += 2
+    } else {
+      item = Buffer.from(c)
+    }
+    ret = Buffer.concat([ret, item])
+  }
+  return ret.toString()
+}
+
+function _recursiveParseHexString(obj) {
+  if (Array.isArray(obj)) {
+    return obj.map((ele) => _recursiveParseHexString(ele))
+  }
+  if (typeof obj == 'string') {
+    return _parseEscapedHexToUtf8(obj)
+  }
+  if (typeof obj == 'object') {
+    for (let key in obj) {
+      obj[key] = _recursiveParseHexString(obj[key])
+    }
+    return obj
+  }
+  return obj
+}
 // convert a SearchResultEntry object in ldapjs 3.0
 // to a user object to maintain backward compatibility
 
@@ -11,7 +51,7 @@ function _searchResultToUser(pojo) {
     user[attribute.type] =
       attribute.values.length == 1 ? attribute.values[0] : attribute.values
   })
-  return user
+  return _recursiveParseHexString(user)
 }
 // bind and return the ldap client
 function _ldapBind(dn, password, starttls, ldapOpts) {
@@ -142,7 +182,7 @@ async function _searchUserGroups(
           return
         }
         res.on('searchEntry', function (entry) {
-          groups.push(entry.pojo)
+          groups.push(_recursiveParseHexString(entry.pojo))
         })
         res.on('searchReference', function (referral) {})
         res.on('error', function (err) {
@@ -422,3 +462,9 @@ class LdapAuthenticationError extends Error {
 
 module.exports.authenticate = authenticate
 module.exports.LdapAuthenticationError = LdapAuthenticationError
+
+module.exports.exportForTesting = {
+  _isHex,
+  _parseEscapedHexToUtf8,
+  _recursiveParseHexString,
+}
