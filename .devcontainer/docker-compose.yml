@@ -18,3 +18,4 @@ services:
       - LDAP_ADMIN_PASSWORD=password
       - LDAP_USERS=gauss,einstein
       - LDAP_PASSWORDS=password,password
+      - LDAP_GROUP=科学A部
