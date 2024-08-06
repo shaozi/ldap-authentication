@@ -187,7 +187,7 @@ In version 2, The user object has a `raw` field that has the raw data from the L
 Buffer data can now be accessed by `user.raw.profilePhoto`, etc, instead of `user.profilePhoto`.
 
 In version 3, the `raw` field is no longer used. Instead, append `;binary` to the attributes you
-want to get back as buffer. Check the following example on how to get a user's profile photo:
+want to get back as base64-encoded string. Check the following example on how to get a user's profile photo:
 
 ```javascript
 export async function verifyLogin(email: string, password: string) {
@@ -210,7 +210,7 @@ export async function verifyLogin(email: string, password: string) {
     const profilePhoto = ldapUser['thumbnailPhoto;binary'];
 
     /* using the image
-	<img src={`data:image/*;base64,${user.profilePhoto}`} />
+	<img src={`data:image/*;base64,${profilePhoto}`} />
     */
     return { user: ldapUser };
   }
