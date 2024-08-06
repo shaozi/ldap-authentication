@@ -20,6 +20,26 @@ describe('ldap-authentication test', () => {
     expect(user).toBeTruthy()
     expect(user.uid).toEqual('gauss')
   })
+  it('Use an admin user to check if user exists and return attributes', async () => {
+    let options = {
+      ldapOpts: {
+        url: url,
+      },
+      adminDn: 'cn=read-only-admin,dc=example,dc=com',
+      adminPassword: 'password',
+      verifyUserExists: true,
+      userSearchBase: 'dc=example,dc=com',
+      usernameAttribute: 'uid',
+      username: 'gauss',
+      attributes: ['uid', 'sn'],
+    }
+
+    let user = await authenticate(options)
+    expect(user).toBeTruthy()
+    expect(user.uid).toEqual('gauss')
+    expect(user.sn).toEqual('Bar1')
+    expect(user.cn).toBeUndefined()
+  })
   it('Use an admin user to authenticate a regular user', async () => {
     let options = {
       ldapOpts: {
