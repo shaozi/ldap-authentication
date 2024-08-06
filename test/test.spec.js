@@ -37,7 +37,7 @@ describe('ldap-authentication test', () => {
     expect(user).toBeTruthy()
     expect(user.uid).toEqual('gauss')
   })
-  it('Use an admin user to authenticate a regular user and return attrubutes', async () => {
+  it('Use an admin user to authenticate a regular user and return attributes', async () => {
     let options = {
       ldapOpts: {
         url: url,
