@@ -406,7 +406,8 @@ async function authenticate(options) {
       options.groupsSearchBase,
       options.groupClass,
       options.groupMemberAttribute,
-      options.groupMemberUserAttribute
+      options.groupMemberUserAttribute,
+      options.attributes
     )
   }
   assert(options.userPassword, 'userPassword must be provided')
