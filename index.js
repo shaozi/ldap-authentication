@@ -1,5 +1,42 @@
 const assert = require('assert')
 const ldap = require('ldapjs')
+// escape the , in CN in DN
+function _ldapEscapeDN(s) {
+  let ret = "";
+  let comaPositions = [];
+  let done = false;
+  let countEq = 0;
+  for (let i = 0; !done && i < s.length; i++) {
+    switch (s[i]) {
+      case "\\":
+        // user already escapped, continue
+        i++;
+        break;
+      case ",":
+        if (countEq == 1) {
+          comaPositions.push(i);
+        }
+        break;
+      case "=":
+        countEq++;
+        if (countEq == 2) {
+          done = true;
+        }
+        break;
+    }
+  }
+  if (done) {
+    comaPositions.pop();
+  }
+  let lastIndex = 0;
+  for (let i of comaPositions) {
+    ret += s.substring(lastIndex, i);
+    ret += "\\,";
+    lastIndex = i + 1;
+  }
+  ret += s.substring(lastIndex);
+  return ret;
+}
 
 // convert an escaped utf8 string returned from ldapjs
 function _isHex(c) {
@@ -55,6 +92,7 @@ function _searchResultToUser(pojo) {
 }
 // bind and return the ldap client
 function _ldapBind(dn, password, starttls, ldapOpts) {
+  dn = _ldapEscapeDN(dn)
   return new Promise(function (resolve, reject) {
     ldapOpts.connectTimeout = ldapOpts.connectTimeout || 5000
     let client = ldap.createClient(ldapOpts)
