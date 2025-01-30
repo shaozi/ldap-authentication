@@ -1,5 +1,5 @@
 const { exportForTesting } = require('../index.js')
-const { _isHex, _parseEscapedHexToUtf8, _recursiveParseHexString } =
+const { _isHex, _parseEscapedHexToUtf8, _recursiveParseHexString, _ldapEscapeDN } =
   exportForTesting
 
 describe('string conversion test', () => {
@@ -51,9 +51,12 @@ describe('escape , in the DN test', ()=>{
     { s: "CN=a\\, c,DN=b", want: "CN=a\\, c,DN=b" },
     { s: "CN=a, b, c,DN=b", want: "CN=a\\, b\\, c,DN=b" },
     { s: "CN=a, c", want: "CN=a\\, c" },
-  ];
+  ]
   for (let c of cases) {
-    let got = ldapEscapeDN(c.s);
-    expect(got).toEqual(c.want)
+    it("escape "+c.s, ()=>{
+      let got = _ldapEscapeDN(c.s)
+      expect(got).toEqual(c.want)
+    })
+    
   }
 })
