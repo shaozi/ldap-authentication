@@ -506,4 +506,5 @@ module.exports.exportForTesting = {
   _isHex,
   _parseEscapedHexToUtf8,
   _recursiveParseHexString,
+  _ldapEscapeDN
 }
