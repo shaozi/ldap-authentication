@@ -2,40 +2,40 @@ const assert = require('assert')
 const ldap = require('ldapjs')
 // escape the , in CN in DN
 function _ldapEscapeDN(s) {
-  let ret = "";
-  let comaPositions = [];
-  let done = false;
-  let countEq = 0;
+  let ret = ''
+  let comaPositions = []
+  let done = false
+  let countEq = 0
   for (let i = 0; !done && i < s.length; i++) {
     switch (s[i]) {
-      case "\\":
+      case '\\':
         // user already escapped, continue
-        i++;
-        break;
-      case ",":
+        i++
+        break
+      case ',':
         if (countEq == 1) {
-          comaPositions.push(i);
+          comaPositions.push(i)
         }
-        break;
-      case "=":
-        countEq++;
+        break
+      case '=':
+        countEq++
         if (countEq == 2) {
-          done = true;
+          done = true
         }
-        break;
+        break
     }
   }
   if (done) {
-    comaPositions.pop();
+    comaPositions.pop()
   }
-  let lastIndex = 0;
+  let lastIndex = 0
   for (let i of comaPositions) {
-    ret += s.substring(lastIndex, i);
-    ret += "\\,";
-    lastIndex = i + 1;
+    ret += s.substring(lastIndex, i)
+    ret += '\\,'
+    lastIndex = i + 1
   }
-  ret += s.substring(lastIndex);
-  return ret;
+  ret += s.substring(lastIndex)
+  return ret
 }
 
 // convert an escaped utf8 string returned from ldapjs
@@ -238,6 +238,28 @@ async function _searchUserGroups(
   })
 }
 
+async function _bindAdminLdapClient(
+  adminDn,
+  adminPassword,
+  starttls,
+  ldapOpts
+) {
+  let ldapAdminClient
+  try {
+    ldapAdminClient = await _ldapBind(
+      adminDn,
+      adminPassword,
+      starttls,
+      ldapOpts
+    )
+  } catch (error) {
+    ldapAdminClient.unbind()
+    throw { admin: error }
+  }
+
+  return ldapAdminClient
+}
+
 async function authenticateWithAdmin(
   adminDn,
   adminPassword,
@@ -253,51 +275,55 @@ async function authenticateWithAdmin(
   groupMemberUserAttribute = 'dn',
   attributes = null
 ) {
+  let user
   let ldapAdminClient
+  let ldapUserClient
   try {
-    ldapAdminClient = await _ldapBind(
+    ldapAdminClient = await _bindAdminLdapClient(
       adminDn,
       adminPassword,
       starttls,
       ldapOpts
     )
-  } catch (error) {
-    throw { admin: error }
-  }
-  let user = await _searchUser(
-    ldapAdminClient,
-    userSearchBase,
-    usernameAttribute,
-    username,
-    attributes
-  )
-  if (!user || !user.dn) {
-    ldapOpts.log &&
-      ldapOpts.log.trace(
-        `admin did not find user! (${usernameAttribute}=${username})`
-      )
-    throw new LdapAuthenticationError(
-      'user not found or usernameAttribute is wrong'
+
+    user = await _searchUser(
+      ldapAdminClient,
+      userSearchBase,
+      usernameAttribute,
+      username,
+      attributes
     )
-  }
-  let userDn = user.dn
-  let ldapUserClient
-  try {
+    if (!user || !user.dn) {
+      ldapOpts.log &&
+        ldapOpts.log.trace(
+          `admin did not find user! (${usernameAttribute}=${username})`
+        )
+      throw new LdapAuthenticationError(
+        'user not found or usernameAttribute is wrong'
+      )
+    }
+
+    let userDn = user.dn
     ldapUserClient = await _ldapBind(userDn, userPassword, starttls, ldapOpts)
+
+    if (groupsSearchBase && groupClass && groupMemberAttribute) {
+      let groups = await _searchUserGroups(
+        ldapAdminClient,
+        groupsSearchBase,
+        user,
+        groupClass,
+        groupMemberAttribute,
+        groupMemberUserAttribute
+      )
+      user.groups = groups
+    }
   } catch (error) {
     throw error
+  } finally {
+    ldapAdminClient && ldapAdminClient.unbind()
+    ldapUserClient && ldapUserClient.unbind()
   }
-  if (groupsSearchBase && groupClass && groupMemberAttribute) {
-    let groups = await _searchUserGroups(
-      ldapAdminClient,
-      groupsSearchBase,
-      user,
-      groupClass,
-      groupMemberAttribute,
-      groupMemberUserAttribute
-    )
-    user.groups = groups
-  }
+
   return user
 }
 
@@ -315,42 +341,45 @@ async function authenticateWithUser(
   groupMemberUserAttribute = 'dn',
   attributes = null
 ) {
+  let user
   let ldapUserClient
   try {
     ldapUserClient = await _ldapBind(userDn, userPassword, starttls, ldapOpts)
+    if (!usernameAttribute || !userSearchBase) {
+      // if usernameAttribute is not provided, no user detail is needed.
+      return true
+    }
+    user = await _searchUser(
+      ldapUserClient,
+      userSearchBase,
+      usernameAttribute,
+      username,
+      attributes
+    )
+    if (!user || !user.dn) {
+      ldapOpts.log &&
+        ldapOpts.log.trace(
+          `user logged in, but user details could not be found. (${usernameAttribute}=${username}). Probabaly wrong attribute or searchBase?`
+        )
+      throw new LdapAuthenticationError(
+        'user logged in, but user details could not be found. Probabaly usernameAttribute or userSearchBase is wrong?'
+      )
+    }
+    if (groupsSearchBase && groupClass && groupMemberAttribute) {
+      let groups = await _searchUserGroups(
+        ldapUserClient,
+        groupsSearchBase,
+        user,
+        groupClass,
+        groupMemberAttribute,
+        groupMemberUserAttribute
+      )
+      user.groups = groups
+    }
   } catch (error) {
     throw error
-  }
-  if (!usernameAttribute || !userSearchBase) {
-    // if usernameAttribute is not provided, no user detail is needed.
-    return true
-  }
-  let user = await _searchUser(
-    ldapUserClient,
-    userSearchBase,
-    usernameAttribute,
-    username,
-    attributes
-  )
-  if (!user || !user.dn) {
-    ldapOpts.log &&
-      ldapOpts.log.trace(
-        `user logged in, but user details could not be found. (${usernameAttribute}=${username}). Probabaly wrong attribute or searchBase?`
-      )
-    throw new LdapAuthenticationError(
-      'user logged in, but user details could not be found. Probabaly usernameAttribute or userSearchBase is wrong?'
-    )
-  }
-  if (groupsSearchBase && groupClass && groupMemberAttribute) {
-    let groups = await _searchUserGroups(
-      ldapUserClient,
-      groupsSearchBase,
-      user,
-      groupClass,
-      groupMemberAttribute,
-      groupMemberUserAttribute
-    )
-    user.groups = groups
+  } finally {
+    ldapUserClient && ldapUserClient.unbind()
   }
   return user
 }
@@ -369,43 +398,46 @@ async function verifyUserExists(
   groupMemberUserAttribute = 'dn',
   attributes = null
 ) {
+  let user
   let ldapAdminClient
   try {
-    ldapAdminClient = await _ldapBind(
+    ldapAdminClient = await _bindAdminLdapClient(
       adminDn,
       adminPassword,
       starttls,
       ldapOpts
     )
-  } catch (error) {
-    throw { admin: error }
-  }
-  let user = await _searchUser(
-    ldapAdminClient,
-    userSearchBase,
-    usernameAttribute,
-    username,
-    attributes
-  )
-  if (!user || !user.dn) {
-    ldapOpts.log &&
-      ldapOpts.log.trace(
-        `admin did not find user! (${usernameAttribute}=${username})`
-      )
-    throw new LdapAuthenticationError(
-      'user not found or usernameAttribute is wrong'
-    )
-  }
-  if (groupsSearchBase && groupClass && groupMemberAttribute) {
-    let groups = await _searchUserGroups(
+    user = await _searchUser(
       ldapAdminClient,
-      groupsSearchBase,
-      user,
-      groupClass,
-      groupMemberAttribute,
-      groupMemberUserAttribute
+      userSearchBase,
+      usernameAttribute,
+      username,
+      attributes
     )
-    user.groups = groups
+    if (!user || !user.dn) {
+      ldapOpts.log &&
+        ldapOpts.log.trace(
+          `admin did not find user! (${usernameAttribute}=${username})`
+        )
+      throw new LdapAuthenticationError(
+        'user not found or usernameAttribute is wrong'
+      )
+    }
+    if (groupsSearchBase && groupClass && groupMemberAttribute) {
+      let groups = await _searchUserGroups(
+        ldapAdminClient,
+        groupsSearchBase,
+        user,
+        groupClass,
+        groupMemberAttribute,
+        groupMemberUserAttribute
+      )
+      user.groups = groups
+    }
+  } catch (error) {
+    throw error
+  } finally {
+    ldapAdminClient && ldapAdminClient.unbind()
   }
   return user
 }
@@ -506,5 +538,5 @@ module.exports.exportForTesting = {
   _isHex,
   _parseEscapedHexToUtf8,
   _recursiveParseHexString,
-  _ldapEscapeDN
+  _ldapEscapeDN,
 }
