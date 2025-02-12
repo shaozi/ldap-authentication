@@ -101,11 +101,13 @@ function _ldapBind(dn, password, starttls, ldapOpts) {
       if (starttls) {
         client.starttls(ldapOpts.tlsOptions, null, function (error) {
           if (error) {
+            client.unbind();
             reject(error)
             return
           }
           client.bind(dn, password, function (err) {
             if (err) {
+              client.unbind();
               reject(err)
               return
             }
@@ -116,6 +118,7 @@ function _ldapBind(dn, password, starttls, ldapOpts) {
       } else {
         client.bind(dn, password, function (err) {
           if (err) {
+            client.unbind();
             reject(err)
             return
           }
@@ -127,17 +130,21 @@ function _ldapBind(dn, password, starttls, ldapOpts) {
 
     //Fix for issue https://github.com/shaozi/ldap-authentication/issues/13
     client.on('timeout', (err) => {
+      client.unbind();
       reject(err)
     })
     client.on('connectTimeout', (err) => {
+      client.unbind();
       reject(err)
     })
     client.on('error', (err) => {
+      client.unbind();
       reject(err)
     })
 
     client.on('connectError', function (error) {
       if (error) {
+        client.unbind();
         reject(error)
         return
       }
@@ -253,7 +260,7 @@ async function _bindAdminLdapClient(
       ldapOpts
     )
   } catch (error) {
-    ldapAdminClient.unbind()
+    ldapAdminClient && ldapAdminClient.unbind()
     throw { admin: error }
   }
 
