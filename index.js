@@ -181,7 +181,13 @@ async function _searchUserGroups(
   } else {
     groups = searchEntries;
   }
-
+  // ldapjs has group.objectName, ldapts does not have it. instead, use dn
+  // add objectName back for backward compatibility
+  for (let group of groups) {
+    if (typeof group.objectName === 'undefined') {
+      group.objectName = group.dn
+    }
+  }
   return groups;
 }
 
