@@ -144,9 +144,7 @@ describe('ldap-authentication test', () => {
     let user = await authenticate(options)
     expect(user).toBeTruthy()
     expect(user.groups.length).toBeGreaterThan(0)
-    expect(user.groups[0].dn).toEqual(
-      'cn=科学A部,ou=users,dc=example,dc=com'
-    )
+    expect(user.groups[0].dn).toEqual('cn=科学A部,ou=users,dc=example,dc=com')
   })
   it('Use regular user to authenticate and fetch user group information', async () => {
     let options = {
@@ -167,7 +165,9 @@ describe('ldap-authentication test', () => {
     let user = await authenticate(options)
     expect(user).toBeTruthy()
     expect(user.groups.length).toBeGreaterThan(0)
-    expect(user.groups[0].dn).toEqual(
+    expect(user.groups[0].dn).toEqual('cn=科学A部,ou=users,dc=example,dc=com')
+    // backward compatible with 3.2
+    expect(user.groups[0].objectName).toEqual(
       'cn=科学A部,ou=users,dc=example,dc=com'
     )
   })
