@@ -145,7 +145,7 @@ describe('ldap-authentication test', () => {
     expect(user).toBeTruthy()
     expect(user.groups.length).toBeGreaterThan(0)
     expect(user.groups[0].dn).toEqual(
-      'cn=科学A部,ou=groups,dc=example,dc=com'
+      'cn=科学A部,ou=users,dc=example,dc=com'
     )
   })
   it('Use regular user to authenticate and fetch user group information', async () => {
@@ -168,7 +168,7 @@ describe('ldap-authentication test', () => {
     expect(user).toBeTruthy()
     expect(user.groups.length).toBeGreaterThan(0)
     expect(user.groups[0].dn).toEqual(
-      'cn=科学A部,ou=groups,dc=example,dc=com'
+      'cn=科学A部,ou=users,dc=example,dc=com'
     )
   })
   it('Not specifying groupMemberAttribute or groupMemberUserAttribute should not cause an error and fallback to default values', async () => {
