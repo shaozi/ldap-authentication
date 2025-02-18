@@ -1,5 +1,5 @@
 const assert = require('assert')
-const ldap = require('ldapjs')
+const ldapts = require('ldapts')
 // escape the , in CN in DN
 function _ldapEscapeDN(s) {
   let ret = "";
@@ -78,6 +78,8 @@ function _recursiveParseHexString(obj) {
   }
   return obj
 }
+/*
+// UPDATE: This function is not used in this version, because ldapts library already does the conversion
 // convert a SearchResultEntry object in ldapjs 3.0
 // to a user object to maintain backward compatibility
 
@@ -90,59 +92,21 @@ function _searchResultToUser(pojo) {
   })
   return _recursiveParseHexString(user)
 }
+*/
 // bind and return the ldap client
-function _ldapBind(dn, password, starttls, ldapOpts) {
+async function _ldapBind(dn, password, starttls, ldapOpts) {
+  // TODO: check if ldapts expects escaped dn or not (possible double escaping problems?)
   dn = _ldapEscapeDN(dn)
-  return new Promise(function (resolve, reject) {
-    ldapOpts.connectTimeout = ldapOpts.connectTimeout || 5000
-    let client = ldap.createClient(ldapOpts)
+  ldapOpts.connectTimeout = ldapOpts.connectTimeout || 5000
+  let client = new ldapts.Client(ldapOpts)
 
-    client.on('connect', function () {
-      if (starttls) {
-        client.starttls(ldapOpts.tlsOptions, null, function (error) {
-          if (error) {
-            reject(error)
-            return
-          }
-          client.bind(dn, password, function (err) {
-            if (err) {
-              reject(err)
-              return
-            }
-            ldapOpts.log && ldapOpts.log.trace('bind success!')
-            resolve(client)
-          })
-        })
-      } else {
-        client.bind(dn, password, function (err) {
-          if (err) {
-            reject(err)
-            return
-          }
-          ldapOpts.log && ldapOpts.log.trace('bind success!')
-          resolve(client)
-        })
-      }
-    })
+  if(starttls) {
+    await client.startTLS(ldapOpts.tlsOptions)
+  }
 
-    //Fix for issue https://github.com/shaozi/ldap-authentication/issues/13
-    client.on('timeout', (err) => {
-      reject(err)
-    })
-    client.on('connectTimeout', (err) => {
-      reject(err)
-    })
-    client.on('error', (err) => {
-      reject(err)
-    })
-
-    client.on('connectError', function (error) {
-      if (error) {
-        reject(error)
-        return
-      }
-    })
-  })
+  await client.bind(dn, password)
+  ldapOpts.log && ldapOpts.log.trace('bind success!')
+  return client
 }
 
 // search a user and return the object
@@ -153,48 +117,36 @@ async function _searchUser(
   username,
   attributes = null
 ) {
-  return new Promise(function (resolve, reject) {
-    let filter = new ldap.filters.EqualityFilter({
-      attribute: usernameAttribute,
-      value: username,
-    })
-    let searchOptions = {
-      filter: filter,
-      scope: 'sub',
-      attributes: attributes,
-    }
-    if (attributes) {
-      searchOptions.attributes = attributes
-    }
-    ldapClient.search(searchBase, searchOptions, function (err, res) {
-      let user = null
-      if (err) {
-        reject(err)
-        return
-      }
-      res.on('searchEntry', function (entry) {
-        user = _searchResultToUser(entry.pojo)
-      })
-      res.on('searchReference', function (referral) {
-        // TODO: we don't support reference yet
-        // If the server was able to locate the entry referred to by the baseObject
-        // but could not search one or more non-local entries,
-        // the server may return one or more SearchResultReference messages,
-        // each containing a reference to another set of servers for continuing the operation.
-        // referral.uris
-      })
-      res.on('error', function (err) {
-        reject(err)
-      })
-      res.on('end', function (result) {
-        if (result.status != 0) {
-          reject(new Error('ldap search status is not 0, search failed'))
-        } else {
-          resolve(user)
-        }
-      })
-    })
-  })
+
+  let filter = new ldapts.EqualityFilter({
+    attribute: usernameAttribute,
+    value: username,
+  });
+  let searchOptions = {
+    filter: filter,
+    scope: 'sub',
+    attributes: attributes,
+  };
+  if (attributes) {
+    searchOptions.attributes = attributes;
+  }
+
+  // TODO: we don't support reference yet
+  // If the server was able to locate the entry referred to by the baseObject
+  // but could not search one or more non-local entries,
+  // the server may return one or more SearchResultReference messages,
+  // each containing a reference to another set of servers for continuing the operation.
+  // referral.uris
+  const { searchEntries, searchReferences } = await ldapClient.search(searchBase, searchOptions);
+
+  let user;
+  if(!searchEntries || searchEntries.length < 1 || !searchEntries[0] || !searchEntries[0].dn) {
+    user = null;
+  } else {
+    user = searchEntries[0];
+  }
+
+  return user;
 }
 
 // search a groups which user is member
@@ -206,36 +158,31 @@ async function _searchUserGroups(
   groupMemberAttribute = 'member',
   groupMemberUserAttribute = 'dn'
 ) {
-  return new Promise(function (resolve, reject) {
-    ldapClient.search(
-      searchBase,
-      {
-        filter: `(&(objectclass=${groupClass})(${groupMemberAttribute}=${user[groupMemberUserAttribute]}))`,
-        scope: 'sub',
-      },
-      function (err, res) {
-        let groups = []
-        if (err) {
-          reject(err)
-          return
-        }
-        res.on('searchEntry', function (entry) {
-          groups.push(_recursiveParseHexString(entry.pojo))
-        })
-        res.on('searchReference', function (referral) {})
-        res.on('error', function (err) {
-          reject(err)
-        })
-        res.on('end', function (result) {
-          if (result.status != 0) {
-            reject(new Error('ldap search status is not 0, search failed'))
-          } else {
-            resolve(groups)
-          }
-        })
-      }
-    )
-  })
+  // Below works, but prefer using ldapts Filter subclasses to build this search, so that correct escaping is done
+  // const filter = `(&(objectclass=${groupClass})(${groupMemberAttribute}=${user[groupMemberUserAttribute]}))`
+  const filter = new ldapts.AndFilter({
+    filters: [
+      new ldapts.EqualityFilter({ attribute: 'objectclass', value: groupClass }),
+      new ldapts.EqualityFilter({ attribute: groupMemberAttribute, value: user[groupMemberUserAttribute] }),
+    ],
+  });
+
+  const { searchEntries, searchReferences } = await ldapClient.search(
+    searchBase,
+    {
+      filter: filter,
+      scope: 'sub',
+    }
+  );
+
+  let groups;
+  if(!searchEntries || searchEntries.length < 1) {
+    groups = [];
+  } else {
+    groups = searchEntries;
+  }
+
+  return groups;
 }
 
 async function authenticateWithAdmin(

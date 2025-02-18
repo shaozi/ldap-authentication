@@ -144,7 +144,7 @@ describe('ldap-authentication test', () => {
     let user = await authenticate(options)
     expect(user).toBeTruthy()
     expect(user.groups.length).toBeGreaterThan(0)
-    expect(user.groups[0].objectName).toEqual(
+    expect(user.groups[0].dn).toEqual(
       'cn=科学A部,ou=users,dc=example,dc=com'
     )
   })
@@ -167,7 +167,7 @@ describe('ldap-authentication test', () => {
     let user = await authenticate(options)
     expect(user).toBeTruthy()
     expect(user.groups.length).toBeGreaterThan(0)
-    expect(user.groups[0].objectName).toEqual(
+    expect(user.groups[0].dn).toEqual(
       'cn=科学A部,ou=users,dc=example,dc=com'
     )
   })
