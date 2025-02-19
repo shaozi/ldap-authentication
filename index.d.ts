@@ -1,4 +1,4 @@
-import { ClientOptions } from 'ldapjs'
+import { ClientOptions } from 'ldapts'
 
 declare module 'ldap-authentication' {
   export interface AuthenticationOptions {

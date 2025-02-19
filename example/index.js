@@ -4,7 +4,7 @@ async function auth() {
   // auth with admin
   let options = {
     ldapOpts: {
-      url: 'ldap://ldap.forumsys.com',
+      url: 'ldap://localhost:1389',
       // tlsOptions: { rejectUnauthorized: false }
     },
     adminDn: 'cn=read-only-admin,dc=example,dc=com',
@@ -55,4 +55,4 @@ async function auth() {
   console.log(`user = ${JSON.stringify(user, null, 2)}`)
 }
 
-auth()
+auth().then()
