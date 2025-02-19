@@ -10,7 +10,7 @@ Make authentication with an LDAP server easy.
 
 ## Description
 
-This library use `ldapjs` as the underneath library. It has three modes of authentications:
+This library use `ldapts` as the underneath library. It has three modes of authentications:
 
 1. **Admin authenticate mode**. If an admin user is provided, the library will login (ldap bind) with the admin user,
    then search for the user to be authenticated, get its DN (distinguish name), then use
@@ -149,7 +149,7 @@ auth()
 
 ## Parameters
 
-- `ldapOpts`: This is passed to `ldapjs` client directly
+- `ldapOpts`: This is passed to `ldapts` client directly
   - `url`: url of the ldap server. Example: `ldap://ldap.forumsys.com`
   - `tlsOptions`: options to pass to node tls. Example: `{ rejectUnauthorized: false }`
   - `connectTimeout`: Int. Default: `5000`. Connect timeout in ms
@@ -210,7 +210,7 @@ export async function verifyLogin(email: string, password: string) {
     const profilePhoto = ldapUser['thumbnailPhoto;binary'];
 
     /* using the image
-	<img src={`data:image/*;base64,${profilePhoto}`} />
+ <img src={`data:image/*;base64,${profilePhoto}`} />
     */
     return { user: ldapUser };
   }

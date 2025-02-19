@@ -2,97 +2,42 @@ const assert = require('assert')
 const ldapts = require('ldapts')
 // escape the , in CN in DN
 function _ldapEscapeDN(s) {
-  let ret = "";
-  let comaPositions = [];
-  let done = false;
-  let countEq = 0;
+  let ret = ''
+  let comaPositions = []
+  let done = false
+  let countEq = 0
   for (let i = 0; !done && i < s.length; i++) {
     switch (s[i]) {
-      case "\\":
+      case '\\':
         // user already escapped, continue
-        i++;
-        break;
-      case ",":
+        i++
+        break
+      case ',':
         if (countEq == 1) {
-          comaPositions.push(i);
+          comaPositions.push(i)
         }
-        break;
-      case "=":
-        countEq++;
+        break
+      case '=':
+        countEq++
         if (countEq == 2) {
-          done = true;
+          done = true
         }
-        break;
+        break
     }
   }
   if (done) {
-    comaPositions.pop();
+    comaPositions.pop()
   }
-  let lastIndex = 0;
+  let lastIndex = 0
   for (let i of comaPositions) {
-    ret += s.substring(lastIndex, i);
-    ret += "\\,";
-    lastIndex = i + 1;
+    ret += s.substring(lastIndex, i)
+    ret += '\\,'
+    lastIndex = i + 1
   }
-  ret += s.substring(lastIndex);
-  return ret;
+  ret += s.substring(lastIndex)
+  return ret
 }
 
-// convert an escaped utf8 string returned from ldapjs
-function _isHex(c) {
-  return (
-    (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F')
-  )
-}
-function _parseEscapedHexToUtf8(s) {
-  // convert 'cn=\\e7\\a0\\94\\e5\\8f\\91A\\e9\\83\\a8,ou=users,dc=example,dc=com'
-  // to 'cn=研发A部,ou=users,dc=example,dc=com'
-  let ret = Buffer.alloc(0)
-  let len = s.length
-  for (let i = 0; i < len; i++) {
-    let c = s[i]
-    let item
-    if (c == '\\' && i < len - 2 && _isHex(s[i + 1]) && _isHex(s[i + 2])) {
-      item = Buffer.from(s.substring(i + 1, i + 3), 'hex')
-      i += 2
-    } else {
-      item = Buffer.from(c)
-    }
-    ret = Buffer.concat([ret, item])
-  }
-  return ret.toString()
-}
-
-function _recursiveParseHexString(obj) {
-  if (Array.isArray(obj)) {
-    return obj.map((ele) => _recursiveParseHexString(ele))
-  }
-  if (typeof obj == 'string') {
-    return _parseEscapedHexToUtf8(obj)
-  }
-  if (typeof obj == 'object') {
-    for (let key in obj) {
-      obj[key] = _recursiveParseHexString(obj[key])
-    }
-    return obj
-  }
-  return obj
-}
-/*
-// UPDATE: This function is not used in this version, because ldapts library already does the conversion
-// convert a SearchResultEntry object in ldapjs 3.0
-// to a user object to maintain backward compatibility
-
-function _searchResultToUser(pojo) {
-  assert(pojo.type == 'SearchResultEntry')
-  let user = { dn: pojo.objectName }
-  pojo.attributes.forEach((attribute) => {
-    user[attribute.type] =
-      attribute.values.length == 1 ? attribute.values[0] : attribute.values
-  })
-  return _recursiveParseHexString(user)
-}
-*/
 // bind and return the ldap client
 async function _ldapBind(dn, password, starttls, ldapOpts) {
   // TODO: check if ldapts expects escaped dn or not (possible double escaping problems?)
@@ -100,7 +45,7 @@ async function _ldapBind(dn, password, starttls, ldapOpts) {
   ldapOpts.connectTimeout = ldapOpts.connectTimeout || 5000
   let client = new ldapts.Client(ldapOpts)
 
-  if(starttls) {
+  if (starttls) {
     await client.startTLS(ldapOpts.tlsOptions)
   }
 
@@ -117,18 +62,17 @@ async function _searchUser(
   username,
   attributes = null
 ) {
-
   let filter = new ldapts.EqualityFilter({
     attribute: usernameAttribute,
     value: username,
-  });
+  })
   let searchOptions = {
     filter: filter,
     scope: 'sub',
     attributes: attributes,
-  };
+  }
   if (attributes) {
-    searchOptions.attributes = attributes;
+    searchOptions.attributes = attributes
   }
 
   // TODO: we don't support reference yet
@@ -137,16 +81,24 @@ async function _searchUser(
   // the server may return one or more SearchResultReference messages,
   // each containing a reference to another set of servers for continuing the operation.
   // referral.uris
-  const { searchEntries, searchReferences } = await ldapClient.search(searchBase, searchOptions);
+  const { searchEntries, searchReferences } = await ldapClient.search(
+    searchBase,
+    searchOptions
+  )
 
-  let user;
-  if(!searchEntries || searchEntries.length < 1 || !searchEntries[0] || !searchEntries[0].dn) {
-    user = null;
+  let user
+  if (
+    !searchEntries ||
+    searchEntries.length < 1 ||
+    !searchEntries[0] ||
+    !searchEntries[0].dn
+  ) {
+    user = null
   } else {
-    user = searchEntries[0];
+    user = searchEntries[0]
   }
 
-  return user;
+  return user
 }
 
 // search a groups which user is member
@@ -162,10 +114,16 @@ async function _searchUserGroups(
   // const filter = `(&(objectclass=${groupClass})(${groupMemberAttribute}=${user[groupMemberUserAttribute]}))`
   const filter = new ldapts.AndFilter({
     filters: [
-      new ldapts.EqualityFilter({ attribute: 'objectclass', value: groupClass }),
-      new ldapts.EqualityFilter({ attribute: groupMemberAttribute, value: user[groupMemberUserAttribute] }),
+      new ldapts.EqualityFilter({
+        attribute: 'objectclass',
+        value: groupClass,
+      }),
+      new ldapts.EqualityFilter({
+        attribute: groupMemberAttribute,
+        value: user[groupMemberUserAttribute],
+      }),
     ],
-  });
+  })
 
   const { searchEntries, searchReferences } = await ldapClient.search(
     searchBase,
@@ -173,13 +131,13 @@ async function _searchUserGroups(
       filter: filter,
       scope: 'sub',
     }
-  );
+  )
 
-  let groups;
-  if(!searchEntries || searchEntries.length < 1) {
-    groups = [];
+  let groups
+  if (!searchEntries || searchEntries.length < 1) {
+    groups = []
   } else {
-    groups = searchEntries;
+    groups = searchEntries
   }
   // ldapjs has group.objectName, ldapts does not have it. instead, use dn
   // add objectName back for backward compatibility
@@ -188,7 +146,7 @@ async function _searchUserGroups(
       group.objectName = group.dn
     }
   }
-  return groups;
+  return groups
 }
 
 async function authenticateWithAdmin(
@@ -215,6 +173,9 @@ async function authenticateWithAdmin(
       ldapOpts
     )
   } catch (error) {
+    if (ldapAdminClient.isConnected) {
+      await ldapAdminClient.unbind()
+    }
     throw { admin: error }
   }
   let user = await _searchUser(
@@ -229,6 +190,7 @@ async function authenticateWithAdmin(
       ldapOpts.log.trace(
         `admin did not find user! (${usernameAttribute}=${username})`
       )
+    await ldapAdminClient.unbind()
     throw new LdapAuthenticationError(
       'user not found or usernameAttribute is wrong'
     )
@@ -238,6 +200,9 @@ async function authenticateWithAdmin(
   try {
     ldapUserClient = await _ldapBind(userDn, userPassword, starttls, ldapOpts)
   } catch (error) {
+    if (ldapUserClient.isConnected) {
+      await ldapUserClient.unbind()
+    }
     throw error
   }
   if (groupsSearchBase && groupClass && groupMemberAttribute) {
@@ -251,6 +216,8 @@ async function authenticateWithAdmin(
     )
     user.groups = groups
   }
+  await ldapAdminClient.unbind()
+  await ldapUserClient.unbind()
   return user
 }
 
@@ -272,10 +239,14 @@ async function authenticateWithUser(
   try {
     ldapUserClient = await _ldapBind(userDn, userPassword, starttls, ldapOpts)
   } catch (error) {
+    if (ldapUserClient.isConnected) {
+      await ldapUserClient.unbind()
+    }
     throw error
   }
   if (!usernameAttribute || !userSearchBase) {
     // if usernameAttribute is not provided, no user detail is needed.
+    await ldapUserClient.unbind()
     return true
   }
   let user = await _searchUser(
@@ -290,6 +261,7 @@ async function authenticateWithUser(
       ldapOpts.log.trace(
         `user logged in, but user details could not be found. (${usernameAttribute}=${username}). Probabaly wrong attribute or searchBase?`
       )
+    await ldapUserClient.unbind()
     throw new LdapAuthenticationError(
       'user logged in, but user details could not be found. Probabaly usernameAttribute or userSearchBase is wrong?'
     )
@@ -305,6 +277,7 @@ async function authenticateWithUser(
     )
     user.groups = groups
   }
+  await ldapUserClient.unbind()
   return user
 }
 
@@ -331,6 +304,9 @@ async function verifyUserExists(
       ldapOpts
     )
   } catch (error) {
+    if (ldapAdminClient.isConnected) {
+      await ldapAdminClient.unbind()
+    }
     throw { admin: error }
   }
   let user = await _searchUser(
@@ -345,6 +321,7 @@ async function verifyUserExists(
       ldapOpts.log.trace(
         `admin did not find user! (${usernameAttribute}=${username})`
       )
+    await ldapAdminClient.unbind()
     throw new LdapAuthenticationError(
       'user not found or usernameAttribute is wrong'
     )
@@ -360,6 +337,7 @@ async function verifyUserExists(
     )
     user.groups = groups
   }
+  await ldapAdminClient.unbind()
   return user
 }
 
@@ -456,8 +434,5 @@ module.exports.authenticate = authenticate
 module.exports.LdapAuthenticationError = LdapAuthenticationError
 
 module.exports.exportForTesting = {
-  _isHex,
-  _parseEscapedHexToUtf8,
-  _recursiveParseHexString,
-  _ldapEscapeDN
+  _ldapEscapeDN,
 }
