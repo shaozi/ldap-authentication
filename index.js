@@ -173,10 +173,10 @@ async function authenticateWithAdmin(
       ldapOpts
     )
   } catch (error) {
-    if (ldapAdminClient.isConnected) {
+    if (ldapAdminClient && ldapAdminClient.isConnected) {
       await ldapAdminClient.unbind()
     }
-    throw { admin: error }
+    throw new LdapAuthenticationError(error)
   }
   let user = await _searchUser(
     ldapAdminClient,
@@ -200,10 +200,10 @@ async function authenticateWithAdmin(
   try {
     ldapUserClient = await _ldapBind(userDn, userPassword, starttls, ldapOpts)
   } catch (error) {
-    if (ldapUserClient.isConnected) {
+    if (ldapUserClient && ldapUserClient.isConnected) {
       await ldapUserClient.unbind()
     }
-    throw error
+    throw new LdapAuthenticationError(error)
   }
   if (groupsSearchBase && groupClass && groupMemberAttribute) {
     let groups = await _searchUserGroups(
@@ -239,10 +239,10 @@ async function authenticateWithUser(
   try {
     ldapUserClient = await _ldapBind(userDn, userPassword, starttls, ldapOpts)
   } catch (error) {
-    if (ldapUserClient.isConnected) {
+    if (ldapUserClient && ldapUserClient.isConnected) {
       await ldapUserClient.unbind()
     }
-    throw error
+    throw new LdapAuthenticationError(error)
   }
   if (!usernameAttribute || !userSearchBase) {
     // if usernameAttribute is not provided, no user detail is needed.
@@ -304,10 +304,10 @@ async function verifyUserExists(
       ldapOpts
     )
   } catch (error) {
-    if (ldapAdminClient.isConnected) {
+    if (ldapAdminClient && ldapAdminClient.isConnected) {
       await ldapAdminClient.unbind()
     }
-    throw { admin: error }
+    throw new LdapAuthenticationError(error)
   }
   let user = await _searchUser(
     ldapAdminClient,
