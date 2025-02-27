@@ -98,6 +98,14 @@ async function _searchUser(
     user = searchEntries[0]
   }
 
+  // when attribute endwith ;binary, ldapts returns Buffer, we convert them into base64 string
+  if (user != null && attributes != null) {
+    for (let attr of attributes) {
+      if (attr.endsWith(';binary') && Buffer.isBuffer(user[attr])) {
+        user[attr] = user[attr].toString('base64')
+      }
+    }
+  }
   return user
 }
 
