@@ -147,6 +147,43 @@ async function auth() {
 auth()
 ```
 
+### Example with StartTLS
+
+```javascript
+import { authenticate } from 'ldap-authentication'
+
+async function auth() {
+  // auth with admin
+  let options = {
+    ldapOpts: {
+      url: 'ldap://ldap.example.com',
+      tlsOptions: {
+        rejectUnauthorized: false, // For self-signed certificates
+        minVersion: 'TLSv1.2',
+        servername: 'ldap.example.com' // For SNI (Server Name Indication)
+      }
+    },
+    starttls: true, // Enable StartTLS
+    adminDn: 'cn=admin,dc=example,dc=com',
+    adminPassword: 'password',
+    userPassword: 'password',
+    userSearchBase: 'dc=example,dc=com',
+    usernameAttribute: 'uid',
+    username: 'testuser'
+  }
+
+  let user = await authenticate(options)
+  console.log(user)
+}
+
+auth()
+```
+
+**Important Notes for StartTLS:**
+- Use `ldap://` URLs with `starttls: true` (not `ldaps://`)
+- For `ldaps://` URLs, omit `starttls` and the connection will use TLS from the start
+- TLS options like `rejectUnauthorized`, `minVersion`, and `servername` can be specified in `ldapOpts.tlsOptions`
+
 ## Parameters
 
 - `ldapOpts`: This is passed to `ldapts` client directly
@@ -172,7 +209,9 @@ auth()
   to find the user and get user details in LDAP. Example: `some user input`
 - `attributes`: A list of attributes of a user details to be returned from the LDAP server.
   If is set to `[]` or ommited, all details will be returned. Example: `['sn', 'cn']`
-- `starttls`: Boolean. Use `STARTTLS` or not
+- `starttls`: Boolean. Use `STARTTLS` or not. When `true`, the connection will be upgraded to TLS
+  using the STARTTLS extended operation. TLS options can be specified in `ldapOpts.tlsOptions`.
+  Note: Use `starttls: true` with `ldap://` URLs, not `ldaps://` URLs
 - `groupsSearchBase`: if specified with groupClass, will serve as search base for authenticated user groups
 - `groupClass`: if specified with groupsSearchBase, will be used as objectClass in search filter for authenticated user groups
 - `groupMemberAttribute`: if specified with groupClass and groupsSearchBase, will be used as member name (if not specified this defaults to `member`) in search filter for authenticated user groups

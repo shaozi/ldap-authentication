@@ -43,7 +43,25 @@ async function _ldapBind(dn, password, starttls, ldapOpts) {
   // TODO: check if ldapts expects escaped dn or not (possible double escaping problems?)
   dn = _ldapEscapeDN(dn)
   ldapOpts.connectTimeout = ldapOpts.connectTimeout || 5000
-  let client = new ldapts.Client(ldapOpts)
+  
+  // When using StartTLS, we need to exclude tlsOptions from the Client constructor
+  // and only pass them to the startTLS() method to avoid connection conflicts.
+  // According to ldapts documentation:
+  // - For LDAPS (ldaps://): pass tlsOptions to Client constructor
+  // - For StartTLS (ldap://): do NOT pass tlsOptions to Client constructor, only to startTLS()
+  // - For plain LDAP (ldap://): do NOT pass tlsOptions to Client constructor
+  let clientOpts = ldapOpts
+  const isLdaps = ldapOpts.url && ldapOpts.url.startsWith('ldaps://')
+  
+  // Only pass tlsOptions to Client constructor if using ldaps:// protocol
+  // For ldap:// protocol (plain or StartTLS), exclude tlsOptions from constructor
+  if (!isLdaps && ldapOpts.tlsOptions) {
+    // Create a shallow copy of ldapOpts without tlsOptions for the Client constructor
+    const { tlsOptions, ...optsWithoutTls } = ldapOpts
+    clientOpts = optsWithoutTls
+  }
+  
+  let client = new ldapts.Client(clientOpts)
 
   if (starttls) {
     await client.startTLS(ldapOpts.tlsOptions)
