@@ -8,7 +8,7 @@ services:
     command: sleep infinity
 
   ldap:
-    image: bitnami/openldap
+    image: symas/openldap:2.6
     ports:
       - '1389:1389'
       - '1636:1636'
