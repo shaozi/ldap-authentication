@@ -38,12 +38,64 @@ function _ldapEscapeDN(s) {
   return ret
 }
 
+const AUTH_RESULT_FAILURE = 0
+const AUTH_RESULT_SUCCESS = 1
+const AUTH_RESULT_FAILURE_IDENTITY_NOT_FOUND = -1
+const AUTH_RESULT_FAILURE_IDENTITY_AMBIGUOUS = -2
+const AUTH_RESULT_FAILURE_CREDENTIAL_INVALID = -3
+const AUTH_RESULT_FAILURE_UNCATEGORIZED = -4
+
+class AuthenticationResult {
+  #authCode = AUTH_RESULT_FAILURE_UNCATEGORIZED
+  #identity
+  #user
+  #messages = []
+  #client
+
+  constructor(authCode, identity, user, messages, client) {
+    this.#authCode = authCode // one of the above constants
+    this.#identity = identity // identity supplied as string
+    this.#user     = user // user object found on ldap server OR null
+    this.#messages = messages // authentication messages array, which contains server messages
+    this.#client   = client // ldapClient instance
+  }
+
+  get code() {
+    return this.#authCode
+  }
+
+  get identity() {
+    return this.#identity
+  }
+
+  get messages() {
+    return this.#messages
+  }
+
+  get client() {
+    return this.#client
+  }
+
+  get user() {
+    return this.#user
+  }
+}
+
+const authenticationMessages = {
+  AUTH_RESULT_FAILURE: 'Authentication failed',
+  AUTH_RESULT_SUCCESS: 'Authentication successful',
+  AUTH_RESULT_FAILURE_IDENTITY_NOT_FOUND: 'Authentication identity not found',
+  AUTH_RESULT_FAILURE_IDENTITY_AMBIGUOUS: 'Authentication identity ambiguous',
+  AUTH_RESULT_FAILURE_CREDENTIAL_INVALID: 'Invalid credentials',
+  AUTH_RESULT_FAILURE_UNCATEGORIZED: 'Uncategorized authentication failure',
+}
+
 // bind and return the ldap client
 async function _ldapBind(dn, password, starttls, ldapOpts) {
   // TODO: check if ldapts expects escaped dn or not (possible double escaping problems?)
   dn = _ldapEscapeDN(dn)
   ldapOpts.connectTimeout = ldapOpts.connectTimeout || 5000
-  
+
   // When using StartTLS, we need to exclude tlsOptions from the Client constructor
   // and only pass them to the startTLS() method to avoid connection conflicts.
   // According to ldapts documentation:
@@ -52,7 +104,7 @@ async function _ldapBind(dn, password, starttls, ldapOpts) {
   // - For plain LDAP (ldap://): do NOT pass tlsOptions to Client constructor
   let clientOpts = ldapOpts
   const isLdaps = ldapOpts.url && ldapOpts.url.startsWith('ldaps://')
-  
+
   // Only pass tlsOptions to Client constructor if using ldaps:// protocol
   // For ldap:// protocol (plain or StartTLS), exclude tlsOptions from constructor
   if (!isLdaps && ldapOpts.tlsOptions) {
@@ -60,7 +112,7 @@ async function _ldapBind(dn, password, starttls, ldapOpts) {
     const { tlsOptions, ...optsWithoutTls } = ldapOpts
     clientOpts = optsWithoutTls
   }
-  
+
   let client = new ldapts.Client(clientOpts)
 
   if (starttls) {
@@ -115,8 +167,24 @@ async function _searchUser(
     !searchEntries[0] ||
     !searchEntries[0].dn
   ) {
-    user = null
+    return new AuthenticationResult(
+      AUTH_RESULT_FAILURE_IDENTITY_NOT_FOUND,
+      username,
+      null,
+      [authenticationMessages.AUTH_RESULT_FAILURE_IDENTITY_NOT_FOUND],
+      ldapClient
+    )
   } else {
+    if (searchEntries.length > 1) {
+      return new AuthenticationResult(
+        AUTH_RESULT_FAILURE_IDENTITY_AMBIGUOUS,
+        username,
+        null,
+        [authenticationMessages.AUTH_RESULT_FAILURE_IDENTITY_AMBIGUOUS],
+        ldapClient
+      )
+    }
+
     user = searchEntries[0]
   }
 
@@ -136,7 +204,14 @@ async function _searchUser(
       }
     }
   }
-  return user
+
+  return new AuthenticationResult(
+    AUTH_RESULT_SUCCESS,
+    username,
+    user,
+    [authenticationMessages.AUTH_RESULT_SUCCESS],
+    ldapClient
+  )
 }
 
 // search a groups which user is member
@@ -215,9 +290,17 @@ async function authenticateWithAdmin(
     if (ldapAdminClient && ldapAdminClient.isConnected) {
       await ldapAdminClient.unbind()
     }
-    throw new LdapAuthenticationError(error)
+
+    return new AuthenticationResult(
+      AUTH_RESULT_FAILURE,
+      username,
+      null,
+      [authenticationMessages.AUTH_RESULT_FAILURE, error.message || 'admin bind failed'],
+      ldapAdminClient
+    )
   }
-  let user = await _searchUser(
+
+  let searchResult = await _searchUser(
     ldapAdminClient,
     userSearchBase,
     usernameAttribute,
@@ -225,14 +308,21 @@ async function authenticateWithAdmin(
     attributes,
     explicitBufferAttributes
   )
+
+  let user = searchResult.user
+
   if (!user || !user.dn) {
     ldapOpts.log &&
       ldapOpts.log.trace(
         `admin did not find user! (${usernameAttribute}=${username})`
       )
     await ldapAdminClient.unbind()
-    throw new LdapAuthenticationError(
-      'user not found or usernameAttribute is wrong'
+    return new AuthenticationResult(
+      AUTH_RESULT_FAILURE_IDENTITY_NOT_FOUND,
+      username,
+      null,
+      [authenticationMessages.AUTH_RESULT_FAILURE_IDENTITY_NOT_FOUND],
+      ldapAdminClient
     )
   }
   let userDn = user.dn
@@ -243,7 +333,14 @@ async function authenticateWithAdmin(
     if (ldapUserClient && ldapUserClient.isConnected) {
       await ldapUserClient.unbind()
     }
-    throw new LdapAuthenticationError(error)
+
+    return new AuthenticationResult(
+      AUTH_RESULT_FAILURE_CREDENTIAL_INVALID,
+      username,
+      null,
+      [authenticationMessages.AUTH_RESULT_FAILURE_CREDENTIAL_INVALID, error.message || 'invalid credentials'],
+      ldapAdminClient
+    )
   }
   if (groupsSearchBase && groupClass && groupMemberAttribute) {
     let groups = await _searchUserGroups(
@@ -258,7 +355,14 @@ async function authenticateWithAdmin(
   }
   await ldapAdminClient.unbind()
   await ldapUserClient.unbind()
-  return user
+
+  return new AuthenticationResult(
+    AUTH_RESULT_SUCCESS,
+    username,
+    user,
+    [authenticationMessages.AUTH_RESULT_SUCCESS],
+    ldapAdminClient
+  )
 }
 
 async function authenticateWithUser(
@@ -283,14 +387,28 @@ async function authenticateWithUser(
     if (ldapUserClient && ldapUserClient.isConnected) {
       await ldapUserClient.unbind()
     }
-    throw new LdapAuthenticationError(error)
+
+    return new AuthenticationResult(
+      AUTH_RESULT_FAILURE,
+      username,
+      null,
+      [authenticationMessages.AUTH_RESULT_FAILURE, error.message || 'user bind failed'],
+      ldapUserClient
+    )
   }
   if (!usernameAttribute || !userSearchBase) {
     // if usernameAttribute is not provided, no user detail is needed.
     await ldapUserClient.unbind()
-    return true
+    return new AuthenticationResult(
+      AUTH_RESULT_SUCCESS,
+      username,
+      {},
+      [authenticationMessages.AUTH_RESULT_SUCCESS],
+      ldapUserClient
+    )
   }
-  let user = await _searchUser(
+
+  let searchResult = await _searchUser(
     ldapUserClient,
     userSearchBase,
     usernameAttribute,
@@ -298,14 +416,25 @@ async function authenticateWithUser(
     attributes,
     explicitBufferAttributes
   )
+
+  let user = searchResult.user
+
   if (!user || !user.dn) {
     ldapOpts.log &&
       ldapOpts.log.trace(
         `user logged in, but user details could not be found. (${usernameAttribute}=${username}). Probabaly wrong attribute or searchBase?`
       )
     await ldapUserClient.unbind()
-    throw new LdapAuthenticationError(
-      'user logged in, but user details could not be found. Probabaly usernameAttribute or userSearchBase is wrong?'
+
+    return new AuthenticationResult(
+      AUTH_RESULT_FAILURE,
+      username,
+      null,
+      [
+        authenticationMessages.AUTH_RESULT_FAILURE,
+        'user logged in, but user details could not be found. Probabaly usernameAttribute or userSearchBase is wrong?',
+      ],
+      ldapUserClient
     )
   }
   if (groupsSearchBase && groupClass && groupMemberAttribute) {
@@ -320,7 +449,14 @@ async function authenticateWithUser(
     user.groups = groups
   }
   await ldapUserClient.unbind()
-  return user
+
+  return new AuthenticationResult(
+    AUTH_RESULT_SUCCESS,
+    username,
+    user,
+    [authenticationMessages.AUTH_RESULT_SUCCESS],
+    ldapUserClient
+  )
 }
 
 async function verifyUserExists(
@@ -350,9 +486,16 @@ async function verifyUserExists(
     if (ldapAdminClient && ldapAdminClient.isConnected) {
       await ldapAdminClient.unbind()
     }
-    throw new LdapAuthenticationError(error)
+    return new AuthenticationResult(
+      AUTH_RESULT_FAILURE,
+      username,
+      null,
+      [authenticationMessages.AUTH_RESULT_FAILURE, error.message || 'admin bind failed'],
+      ldapAdminClient
+    )
   }
-  let user = await _searchUser(
+
+  let searchResult = await _searchUser(
     ldapAdminClient,
     userSearchBase,
     usernameAttribute,
@@ -360,14 +503,24 @@ async function verifyUserExists(
     attributes,
     explicitBufferAttributes
   )
+
+  let user = searchResult.user
+
   if (!user || !user.dn) {
     ldapOpts.log &&
       ldapOpts.log.trace(
         `admin did not find user! (${usernameAttribute}=${username})`
       )
     await ldapAdminClient.unbind()
-    throw new LdapAuthenticationError(
-      'user not found or usernameAttribute is wrong'
+    return new AuthenticationResult(
+      AUTH_RESULT_FAILURE_IDENTITY_NOT_FOUND,
+      username,
+      null,
+      [
+        authenticationMessages.AUTH_RESULT_FAILURE_IDENTITY_NOT_FOUND,
+        'user not found or usernameAttribute is wrong'
+      ],
+      ldapAdminClient
     )
   }
   if (groupsSearchBase && groupClass && groupMemberAttribute) {
@@ -382,10 +535,28 @@ async function verifyUserExists(
     user.groups = groups
   }
   await ldapAdminClient.unbind()
-  return user
+  return new AuthenticationResult(
+    AUTH_RESULT_SUCCESS,
+    username,
+    user,
+    [authenticationMessages.AUTH_RESULT_SUCCESS],
+    ldapAdminClient
+  )
 }
 
 async function authenticate(options) {
+  const result = await authenticateResult(options)
+
+  if (result.code !== AUTH_RESULT_SUCCESS) {
+    throw new LdapAuthenticationError(
+      result.messages[result.messages.length - 1]
+    )
+  }
+
+  return result.user
+}
+
+async function authenticateResult(options) {
   if (!options.userDn) {
     assert(options.adminDn, 'Admin mode adminDn must be provided')
     assert(options.adminPassword, 'Admin mode adminPassword must be provided')
@@ -402,6 +573,7 @@ async function authenticate(options) {
     options.ldapOpts && options.ldapOpts.url,
     'ldapOpts.url must be provided'
   )
+
   if (options.verifyUserExists) {
     assert(options.adminDn, 'Admin mode adminDn must be provided')
     assert(
@@ -424,6 +596,7 @@ async function authenticate(options) {
       options.explicitBufferAttributes
     )
   }
+
   assert(options.userPassword, 'userPassword must be provided')
   if (options.adminDn) {
     assert(
@@ -447,6 +620,7 @@ async function authenticate(options) {
       options.explicitBufferAttributes
     )
   }
+
   assert(options.userDn, 'adminDn/adminPassword OR userDn must be provided')
   return await authenticateWithUser(
     options.userDn,
@@ -477,7 +651,21 @@ class LdapAuthenticationError extends Error {
   }
 }
 
+module.exports.AUTH_RESULT_FAILURE = AUTH_RESULT_FAILURE
+module.exports.AUTH_RESULT_SUCCESS = AUTH_RESULT_SUCCESS
+module.exports.AUTH_RESULT_FAILURE_IDENTITY_NOT_FOUND =
+  AUTH_RESULT_FAILURE_IDENTITY_NOT_FOUND
+module.exports.AUTH_RESULT_FAILURE_IDENTITY_AMBIGUOUS =
+  AUTH_RESULT_FAILURE_IDENTITY_AMBIGUOUS
+module.exports.AUTH_RESULT_FAILURE_CREDENTIAL_INVALID =
+  AUTH_RESULT_FAILURE_CREDENTIAL_INVALID
+module.exports.AUTH_RESULT_FAILURE_UNCATEGORIZED =
+  AUTH_RESULT_FAILURE_UNCATEGORIZED
+
+module.exports.AuthenticationResult = AuthenticationResult
+
 module.exports.authenticate = authenticate
+module.exports.authenticateResult = authenticateResult
 module.exports.LdapAuthenticationError = LdapAuthenticationError
 
 module.exports.exportForTesting = {
