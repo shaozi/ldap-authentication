@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node-version: [16.x, 17.x, 18.x, 20.x, 22.x]
+        node-version: [20.x, 22.x, 24.x]
 
     name: 'Integration Node v${{ matrix.node-version }}'
 
@@ -46,7 +46,7 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: ${{ matrix.node-version }}
-      - run: npm install
+      - run: npm ci
       - run: npm run test
 
       - name: Stop containers

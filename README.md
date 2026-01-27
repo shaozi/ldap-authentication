@@ -221,6 +221,28 @@ auth()
 
 The user object if `authenticate()` is success.
 
+In version 4, a new function is added: `authenticateResult()`. It has the same call signature as `authenticate()` but returns an object `AuthenticationResult` with more details.
+
+
+### AuthenticationResult Object
+
+AuthenticationResult object has the following fields:
+
+- `code`: number. constants:
+  - `AUTH_RESULT_FAILURE` = 0
+  - `AUTH_RESULT_SUCCESS` = 1
+  - `AUTH_RESULT_FAILURE_IDENTITY_NOT_FOUND` = -1
+  - `AUTH_RESULT_FAILURE_IDENTITY_AMBIGUOUS` = -2
+  - `AUTH_RESULT_FAILURE_CREDENTIAL_INVALID` = -3
+  - `AUTH_RESULT_FAILURE_UNCATEGORIZED` = -4
+- `identity`: identity supplied as string
+- `user`: user object if authentication is successful, otherwise null
+- `message`: authentication message array, which contains server messages
+- `client`: ldapClient instance
+
+
+## Old Stuff
+
 In version 2, The user object has a `raw` field that has the raw data from the LDAP/AD server. It can be used to access buffer objects (profile pics for example).
 
 Buffer data can now be accessed by `user.raw.profilePhoto`, etc, instead of `user.profilePhoto`.
@@ -260,4 +282,6 @@ export async function verifyLogin(email: string, password: string) {
 
 Version 2 supports Node version 12, 14, 15, 16, 17 and 18.
 
-Version 3 supports Node version 16, 17, 18, 20 and 22,
+Version 3 supports Node version 16, 17, 18, 20 and 22.
+
+Version 4 supports Node version 20 and above.
