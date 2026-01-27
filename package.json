@@ -36,7 +36,7 @@
   },
   "homepage": "https://github.com/shaozi/ldap-authentication#readme",
   "dependencies": {
-    "ldapts": "^7.4.0"
+    "ldapts": "^7.3.1"
   },
   "devDependencies": {
     "jasmine": "^6.0.0"
