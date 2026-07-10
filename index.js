@@ -579,8 +579,8 @@ async function authenticateResult(options) {
     assert(options.adminPassword, 'Admin mode adminPassword must be provided')
     assert(options.userSearchBase, 'Admin mode userSearchBase must be provided')
     assert(
-      options.usernameAttribute,
-      'Admin mode usernameAttribute must be provided'
+      options.usernameAttribute || options.usernameFilter,
+      'Admin mode usernameAttribute or usernameFilter must be provided'
     )
     assert(options.username, 'Admin mode username must be provided')
   } else {
