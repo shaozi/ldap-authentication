@@ -139,7 +139,7 @@ async function _searchUser(
 ) {
   let filter;
   if(usernameFilter){
-    filter = usernameFilter.replaceAll("{{username}}",username);
+    filter = usernameFilter.replaceAll("{{username}}",username.replaceAll(/[&|!*()]/g,""));
   }
   else{
     filter = new ldapts.EqualityFilter({
