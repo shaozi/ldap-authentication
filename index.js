@@ -124,19 +124,30 @@ async function _ldapBind(dn, password, starttls, ldapOpts) {
   return client
 }
 
+// replace username in filter
+
+
 // search a user and return the object
 async function _searchUser(
   ldapClient,
   searchBase,
+  usernameFilter,
   usernameAttribute,
   username,
   attributes = null,
   explicitBufferAttributes = null
 ) {
-  let filter = new ldapts.EqualityFilter({
-    attribute: usernameAttribute,
-    value: username,
-  })
+  let filter;
+  if(usernameFilter){
+    filter = usernameFilter.replaceAll("{{username}}",username);
+  }
+  else{
+    filter = new ldapts.EqualityFilter({
+      attribute: usernameAttribute,
+      value: username,
+    })
+  }
+  
   let searchOptions = {
     filter: filter,
     scope: 'sub',
@@ -266,6 +277,7 @@ async function authenticateWithAdmin(
   adminDn,
   adminPassword,
   userSearchBase,
+  usernameFilter,
   usernameAttribute,
   username,
   userPassword,
@@ -303,6 +315,7 @@ async function authenticateWithAdmin(
   let searchResult = await _searchUser(
     ldapAdminClient,
     userSearchBase,
+    usernameFilter,
     usernameAttribute,
     username,
     attributes,
@@ -368,6 +381,7 @@ async function authenticateWithAdmin(
 async function authenticateWithUser(
   userDn,
   userSearchBase,
+  usernameFilter,
   usernameAttribute,
   username,
   userPassword,
@@ -411,6 +425,7 @@ async function authenticateWithUser(
   let searchResult = await _searchUser(
     ldapUserClient,
     userSearchBase,
+    usernameFilter,
     usernameAttribute,
     username,
     attributes,
@@ -463,6 +478,7 @@ async function verifyUserExists(
   adminDn,
   adminPassword,
   userSearchBase,
+  usernameFilter,
   usernameAttribute,
   username,
   starttls,
@@ -498,6 +514,7 @@ async function verifyUserExists(
   let searchResult = await _searchUser(
     ldapAdminClient,
     userSearchBase,
+    usernameFilter,
     usernameAttribute,
     username,
     attributes,
@@ -584,6 +601,7 @@ async function authenticateResult(options) {
       options.adminDn,
       options.adminPassword,
       options.userSearchBase,
+      options.usernameFilter,
       options.usernameAttribute,
       options.username,
       options.starttls,
@@ -607,6 +625,7 @@ async function authenticateResult(options) {
       options.adminDn,
       options.adminPassword,
       options.userSearchBase,
+      options.usernameFilter,
       options.usernameAttribute,
       options.username,
       options.userPassword,
@@ -625,6 +644,7 @@ async function authenticateResult(options) {
   return await authenticateWithUser(
     options.userDn,
     options.userSearchBase,
+    options.usernameFilter,
     options.usernameAttribute,
     options.username,
     options.userPassword,

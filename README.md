@@ -204,6 +204,9 @@ auth()
   if this value is not set, then authenticate will return true right after user bind succeed. No user details
   from LDAP search will be performed and returned.
   Example: `uid`
+- `usernameFilter`: Prioritized alternative to usernameAttribute, allows you to provide a filter where `{{username}}` will 
+  be replaced with the username provided
+  Example: `(|(uid={{username}})(mail={{username}}))`
 - `username`: The username to authenticate with. It is used together with the name in `usernameAttribute`
   to construct an ldap filter as `({attribute}={username})`
   to find the user and get user details in LDAP. Example: `some user input`

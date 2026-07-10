@@ -8,6 +8,7 @@ declare module 'ldap-authentication' {
     adminPassword?: string
     userSearchBase?: string
     usernameAttribute?: string
+    usernameFilter?:string
     username?: string
     verifyUserExists?: boolean
     starttls?: boolean
