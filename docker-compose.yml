@@ -1,13 +1,15 @@
 services:
   ldap:
-    image: symas/openldap:2.6
+    # LDAP server used by the integration tests, based on osixia/openldap.
+    # The Dockerfile in docker/ldap/ seeds the directory with the users,
+    # groups and admin account the tests rely on.
+    build:
+      context: .
+      dockerfile: docker/ldap/Dockerfile
     ports:
-      - '1389:1389'
-      - '1636:1636'
+      - '1389:389'
+      - '1636:636'
     environment:
-      - LDAP_ROOT=dc=example,dc=com
-      - LDAP_ADMIN_USERNAME=read-only-admin
+      - LDAP_DOMAIN=example.com
       - LDAP_ADMIN_PASSWORD=password
-      - LDAP_USERS=gauss,einstein
-      - LDAP_PASSWORDS=password,password
-      - LDAP_GROUP=科学A部
+      - LDAP_TLS=true

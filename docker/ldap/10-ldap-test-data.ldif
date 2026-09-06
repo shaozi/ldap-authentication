@@ -1,0 +1,47 @@
+# Test directory seed data for ldap-authentication integration tests.
+# Loaded by osixia/openldap at first start via
+# /container/service/slapd/assets/config/bootstrap/ldif/custom
+# (directory bind-mounted in docker-compose.yml).
+# See https://github.com/osixia/container-openldap (v1, tag 1.5.0)
+
+dn: ou=users,dc=example,dc=com
+objectClass: organizationalUnit
+ou: users
+
+dn: ou=groups,dc=example,dc=com
+objectClass: organizationalUnit
+ou: groups
+
+dn: cn=read-only-admin,dc=example,dc=com
+objectClass: simpleSecurityObject
+objectClass: organizationalRole
+cn: read-only-admin
+description: LDAP admin user for tests (password: password)
+userPassword: {SSHA}u/l8yXCyiWhP3iXpt0UWMyM9ch5sZGFwLXRlc3QtMjAyNg==
+
+dn: cn=gauss,ou=users,dc=example,dc=com
+objectClass: inetOrgPerson
+objectClass: posixAccount
+cn: gauss
+sn: Bar1
+uid: gauss
+uidNumber: 1000
+gidNumber: 1000
+homeDirectory: /home/gauss
+userPassword: {SSHA}u/l8yXCyiWhP3iXpt0UWMyM9ch5sZGFwLXRlc3QtMjAyNg==
+
+dn: cn=einstein,ou=users,dc=example,dc=com
+objectClass: inetOrgPerson
+objectClass: posixAccount
+cn: einstein
+sn: Bar2
+uid: einstein
+uidNumber: 1001
+gidNumber: 1001
+homeDirectory: /home/einstein
+userPassword: {SSHA}u/l8yXCyiWhP3iXpt0UWMyM9ch5sZGFwLXRlc3QtMjAyNg==
+
+dn: cn=科学A部,ou=groups,dc=example,dc=com
+objectClass: groupOfNames
+cn: 科学A部
+member: cn=gauss,ou=users,dc=example,dc=com
