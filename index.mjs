@@ -11,6 +11,7 @@ export {
   LdapAuthenticationError,
   authenticate,
   authenticateResult,
+  fetchUsers,
 } from './index.js'
 
 export default ldapAuthentication

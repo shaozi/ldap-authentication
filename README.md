@@ -25,7 +25,11 @@ This library use `ldapts` as the underneath library. It has three modes of authe
    then does a search on the user and return the user's details.
 
 3. **Verify user exists**. If an `verifyUserExists : true` is provided, the library will login (ldap bind) with the admin user,
-   then search for the user to be verified. If the user exists, user details will be returned (without verifying the user's password).
+    then search for the user to be verified. If the user exists, user details will be returned (without verifying the user's password).
+
+In addition, the `fetchUsers()` function can be used to fetch all users under a search base, using the admin
+account to search (without any username or password of the individual users). The search always uses
+LDAP paged results, so the common server-side limit of 1000 entries per search does not apply.
 
 ## Features
 
@@ -99,6 +103,22 @@ let authenticated = await authenticate({
   groupClass: 'groupOfUniqueNames',
   groupMemberAttribute: 'uniqueMember',
   // groupMemberUserAttribute: 'dn'
+})
+```
+
+#### Fetch all users (admin search, without user passwords)
+
+```javascript
+const { fetchUsers } = require('ldap-authentication')
+
+let users = await fetchUsers({
+  ldapOpts: { url: 'ldap://ldap.forumsys.com' },
+  adminDn: 'cn=read-only-admin,dc=example,dc=com',
+  adminPassword: 'password',
+  userSearchBase: 'dc=example,dc=com',
+  // userFilter: '(objectClass=person)',  // default: (|(uid=*)(sAMAccountName=*))
+  // attributes: ['uid', 'sn', 'mail'],   // omitted = all attributes
+  // pageSize: 500,                       // default: 1000
 })
 ```
 
@@ -218,6 +238,12 @@ auth()
 - `username`: The username to authenticate with. It is used together with the name in `usernameAttribute`
   to construct an ldap filter as `({attribute}={username})`
   to find the user and get user details in LDAP. Example: `some user input`
+- `userFilter`: (used by `fetchUsers()`) The ldap search filter to select the users to return.
+  By default it is `(|(uid=*)(sAMAccountName=*))`, which matches both POSIX (`uid`)
+  and Active Directory (`sAMAccountName`) users. Example: `'(objectClass=person)'`,
+  or `'(objectClass=*)'` to match everything
+- `pageSize`: (used by `fetchUsers()`) The number of entries to fetch per page for the paged
+  search. Default: `1000`
 - `attributes`: A list of attributes of a user details to be returned from the LDAP server.
   If is set to `[]` or ommited, all details will be returned. Example: `['sn', 'cn']`
 - `starttls`: Boolean. Use `STARTTLS` or not. When `true`, the connection will be upgraded to TLS
@@ -233,6 +259,8 @@ auth()
 The user object if `authenticate()` is success.
 
 In version 4, a new function is added: `authenticateResult()`. It has the same call signature as `authenticate()` but returns an object `AuthenticationResult` with more details.
+
+`fetchUsers()` returns an array of user objects, one per matched LDAP entry (each with its `dn` and the returned attributes), or an empty array if no user matches the filter.
 
 
 ### AuthenticationResult Object

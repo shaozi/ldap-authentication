@@ -45,6 +45,9 @@ const AUTH_RESULT_FAILURE_IDENTITY_AMBIGUOUS = -2
 const AUTH_RESULT_FAILURE_CREDENTIAL_INVALID = -3
 const AUTH_RESULT_FAILURE_UNCATEGORIZED = -4
 
+const DEFAULT_FETCH_USERS_FILTER = '(|(uid=*)(sAMAccountName=*))'
+const DEFAULT_FETCH_USERS_PAGE_SIZE = 1000
+
 class AuthenticationResult {
   #authCode = AUTH_RESULT_FAILURE_UNCATEGORIZED
   #identity
@@ -271,6 +274,55 @@ async function _searchUserGroups(
     }
   }
   return groups
+}
+
+// search all users under the search base and return the list of user objects
+async function _fetchAllUsers(
+  ldapClient,
+  searchBase,
+  userFilter,
+  attributes = null,
+  explicitBufferAttributes = null,
+  pageSize = DEFAULT_FETCH_USERS_PAGE_SIZE
+) {
+  let filter = userFilter || DEFAULT_FETCH_USERS_FILTER
+
+  let searchOptions = {
+    filter: filter,
+    scope: 'sub',
+    // always use paged results, so more than the usual server-side limit
+    // (usually 1000 entries per page) can be returned
+    paged: { pageSize: pageSize },
+  }
+  if (attributes) {
+    searchOptions.attributes = attributes
+  }
+  if (explicitBufferAttributes) {
+    searchOptions.explicitBufferAttributes = explicitBufferAttributes
+  }
+
+  const { searchEntries } = await ldapClient.search(searchBase, searchOptions)
+
+  let users = searchEntries || []
+  // when attribute endwith ;binary, ldapts returns Buffer, we convert them into base64 string
+  for (let user of users) {
+    if (user != null && attributes != null) {
+      for (let attr of attributes) {
+        if (attr.endsWith(';binary') && Buffer.isBuffer(user[attr])) {
+          user[attr] = user[attr].toString('base64')
+        }
+      }
+    }
+    // when attribute is one of the explicitBufferAttributes, should convert to base64 string
+    if (user != null && explicitBufferAttributes != null) {
+      for (let attr of explicitBufferAttributes) {
+        if (Buffer.isBuffer(user[attr])) {
+          user[attr] = user[attr].toString('base64')
+        }
+      }
+    }
+  }
+  return users
 }
 
 async function authenticateWithAdmin(
@@ -561,6 +613,51 @@ async function verifyUserExists(
   )
 }
 
+// fetch all users under the search base, using the admin account to search.
+// the search always uses paged results so the common server-side limit of
+// 1000 entries does not apply.
+async function fetchUsers(options) {
+  assert(
+    options.ldapOpts && options.ldapOpts.url,
+    'fetchUsers: ldapOpts.url must be provided'
+  )
+  assert(options.adminDn, 'fetchUsers: adminDn must be provided')
+  assert(options.adminPassword, 'fetchUsers: adminPassword must be provided')
+  assert(options.userSearchBase, 'fetchUsers: userSearchBase must be provided')
+
+  let ldapAdminClient
+  try {
+    ldapAdminClient = await _ldapBind(
+      options.adminDn,
+      options.adminPassword,
+      options.starttls,
+      options.ldapOpts
+    )
+  } catch (error) {
+    if (ldapAdminClient && ldapAdminClient.isConnected) {
+      await ldapAdminClient.unbind()
+    }
+    throw new LdapAuthenticationError(error.message || 'admin bind failed')
+  }
+
+  try {
+    return await _fetchAllUsers(
+      ldapAdminClient,
+      options.userSearchBase,
+      options.userFilter,
+      options.attributes,
+      options.explicitBufferAttributes,
+      options.pageSize || DEFAULT_FETCH_USERS_PAGE_SIZE
+    )
+  } catch (error) {
+    throw new LdapAuthenticationError(error.message || 'user search failed')
+  } finally {
+    if (ldapAdminClient && ldapAdminClient.isConnected) {
+      await ldapAdminClient.unbind()
+    }
+  }
+}
+
 async function authenticate(options) {
   const result = await authenticateResult(options)
 
@@ -686,6 +783,7 @@ module.exports.AuthenticationResult = AuthenticationResult
 
 module.exports.authenticate = authenticate
 module.exports.authenticateResult = authenticateResult
+module.exports.fetchUsers = fetchUsers
 module.exports.LdapAuthenticationError = LdapAuthenticationError
 
 module.exports.exportForTesting = {
