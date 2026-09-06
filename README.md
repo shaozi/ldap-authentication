@@ -323,4 +323,4 @@ Version 2 supports Node version 12, 14, 15, 16, 17 and 18.
 
 Version 3 supports Node version 16, 17, 18, 20 and 22.
 
-Version 4 supports Node version 20 and above.
+Version 4 supports Node version 22 and above.
