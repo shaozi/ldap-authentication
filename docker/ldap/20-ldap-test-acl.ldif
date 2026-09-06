@@ -1,0 +1,21 @@
+# ACLs for the test LDAP directory, applied on top of the osixia/openldap
+# defaults (replaces the data database access rules at first start).
+#
+# The userPassword rule must come before the generic "to *" rule: OpenLDAP
+# evaluates the first matching "to" clause for an attribute.
+#
+#  - EXTERNAL (slapd local socket): full manage (used by the image bootstrap)
+#  - cn=admin,dc=example,dc=com: full manage
+#  - cn=read-only-admin,dc=example,dc=com: full manage (tests use it as the
+#    admin, including the entry modify in binary.spec.js)
+#  - normal users: read own entry and read group entries (group lookup tests)
+#  - anonymous: no access (simple bind does not consult other ACLs)
+
+dn: olcDatabase={1}mdb,cn=config
+changetype: modify
+delete: olcAccess
+-
+add: olcAccess
+olcAccess: to attrs=userPassword,shadowLastChange by self write by dn="cn=admin,dc=example,dc=com" manage by dn.exact="cn=read-only-admin,dc=example,dc=com" manage by anonymous auth by * none
+olcAccess: to dn.subtree="ou=groups,dc=example,dc=com" by users read by dn.exact="cn=read-only-admin,dc=example,dc=com" read by dn="cn=admin,dc=example,dc=com" manage
+olcAccess: to * by dn.exact=gidNumber=0+uidNumber=0,cn=peercred,cn=external,cn=auth manage by dn="cn=admin,dc=example,dc=com" manage by dn.exact="cn=read-only-admin,dc=example,dc=com" manage by users read by self read by * none
