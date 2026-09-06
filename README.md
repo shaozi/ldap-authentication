@@ -104,6 +104,14 @@ let authenticated = await authenticate({
 
 #### Complete example
 
+The library works with both CommonJS and ES modules:
+
+```javascript
+import { authenticate } from 'ldap-authentication'
+// or
+const { authenticate } = require('ldap-authentication')
+```
+
 ```javascript
 const { authenticate } = require('ldap-authentication')
 
