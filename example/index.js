@@ -1,58 +1,56 @@
+// Admin and self authentication, with group lookup.
+// Requires the bundled seeded test server: `docker compose up -d`
+// (or set LDAP_URL to point at your own server).
+
 const { authenticate } = require('../index')
 
+const url = process.env.LDAP_URL || 'ldap://localhost:1389'
+
 async function auth() {
-  // auth with admin
-  let options = {
-    ldapOpts: {
-      url: 'ldap://localhost:1389',
-      // tlsOptions: { rejectUnauthorized: false }
-    },
+  // 1. Admin mode: bind as admin, find the user, then bind as the user.
+  // Restrict `attributes` so the server does not return everything (including
+  // userPassword).
+  let user = await authenticate({
+    ldapOpts: { url },
     adminDn: 'cn=read-only-admin,dc=example,dc=com',
     adminPassword: 'password',
     userPassword: 'password',
     userSearchBase: 'dc=example,dc=com',
     usernameAttribute: 'uid',
     username: 'gauss',
-    // starttls: false
-  }
+    attributes: ['uid', 'sn', 'cn'],
+  })
+  console.log('admin mode     ->', JSON.stringify(user, null, 2))
 
-  let user = await authenticate(options)
-  console.log(`user = ${JSON.stringify(user, null, 2)}`)
-
-  // auth with regular user
-  options = {
-    ldapOpts: {
-      url: 'ldap://ldap.forumsys.com',
-      // tlsOptions: { rejectUnauthorized: false }
-    },
-    userDn: 'uid=einstein,dc=example,dc=com',
+  // 2. Self mode: the user binds with its own DN and gets its details
+  user = await authenticate({
+    ldapOpts: { url },
+    userDn: 'cn=einstein,ou=users,dc=example,dc=com',
     userPassword: 'password',
     userSearchBase: 'dc=example,dc=com',
     usernameAttribute: 'uid',
     username: 'einstein',
-    // starttls: false
-  }
+    attributes: ['uid', 'sn'],
+  })
+  console.log('self mode      ->', { uid: user.uid, sn: user.sn })
 
-  user = await authenticate(options)
-  console.log(`user = ${JSON.stringify(user, null, 2)}`)
-
-  // Getting user group info
-  options = {
-    ldapOpts: {
-      url: 'ldap://ldap.forumsys.com',
-    },
-    userDn: 'uid=gauss,dc=example,dc=com',
+  // 3. Admin mode with group lookup
+  user = await authenticate({
+    ldapOpts: { url },
+    adminDn: 'cn=read-only-admin,dc=example,dc=com',
+    adminPassword: 'password',
     userPassword: 'password',
     userSearchBase: 'dc=example,dc=com',
     usernameAttribute: 'uid',
     username: 'gauss',
     groupsSearchBase: 'dc=example,dc=com',
-    groupClass: 'groupOfUniqueNames',
-    groupMemberAttribute: 'uniqueMember',
-  }
-
-  user = await authenticate(options)
-  console.log(`user = ${JSON.stringify(user, null, 2)}`)
+    groupClass: 'groupOfNames',
+    groupMemberAttribute: 'member',
+  })
+  console.log('with groups    ->', user.groups.map((group) => group.cn))
 }
 
-auth().then()
+auth().catch((error) => {
+  console.error(error)
+  process.exit(1)
+})

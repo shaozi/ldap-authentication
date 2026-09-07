@@ -1,6 +1,6 @@
 {
   "name": "ldap-authentication",
-  "version": "4.2.1",
+  "version": "4.3.0",
   "description": "A simple async nodejs library for LDAP user authentication",
   "main": "index.js",
   "types": "./index.d.ts",
@@ -17,7 +17,8 @@
     "node": ">=22.0.0"
   },
   "scripts": {
-    "test": "node test/jasmine.js"
+    "test": "node test/jasmine.js",
+    "test:local": "bash scripts/test-local.sh"
   },
   "repository": {
     "type": "git",

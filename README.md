@@ -212,6 +212,18 @@ auth()
 - For `ldaps://` URLs, omit `starttls` and the connection will use TLS from the start
 - TLS options like `rejectUnauthorized`, `minVersion`, and `servername` can be specified in `ldapOpts.tlsOptions`
 
+#### Runnable examples
+
+The [example/](example/) directory contains complete, runnable scripts: admin auth, self auth, group lookup,
+`fetchUsers`, `verifyUserExists`, and StartTLS. They run against the bundled seeded test server
+(start it via `docker compose up -d`, or point `LDAP_URL` at your own server):
+
+```sh
+docker compose up -d               # seeded OpenLDAP on localhost:1389 / 1636
+node example/fetch-users.mjs       # or any other script in example/
+docker compose down
+```
+
 ## Parameters
 
 - `ldapOpts`: This is passed to `ldapts` client directly
@@ -254,6 +266,15 @@ auth()
 - `groupMemberAttribute`: if specified with groupClass and groupsSearchBase, will be used as member name (if not specified this defaults to `member`) in search filter for authenticated user groups
 - `groupMemberUserAttribute`: if specified with groupClass and groupsSearchBase, will be used as the attribute on the user object (if not specified this defaults to `dn`) in search filter for authenticated user groups
 
+### Which options for which mode?
+
+| Mode (call) | Required | Commonly used in addition |
+|---|---|---|
+| Admin authenticate (`authenticate`) | `ldapOpts`, `adminDn`, `adminPassword`, `userPassword`, `userSearchBase`, `usernameAttribute` or `usernameFilter`, `username` | `attributes`, `groupsSearchBase`, `groupClass`, `starttls` |
+| Self authenticate (`authenticate`) | `ldapOpts`, `userDn`, `userPassword` | `userSearchBase`, `usernameAttribute`, `attributes`, `groupsSearchBase`, `starttls` |
+| Verify user exists (`authenticate` with `verifyUserExists: true`) | `ldapOpts`, `adminDn`, `adminPassword`, `userSearchBase`, `usernameAttribute` or `usernameFilter`, `username` | `attributes`, `groupsSearchBase`, `starttls` |
+| Fetch all users (`fetchUsers`) | `ldapOpts`, `adminDn`, `adminPassword`, `userSearchBase` | `userFilter`, `attributes`, `pageSize`, `starttls` |
+
 ## Returns
 
 The user object if `authenticate()` is success.
@@ -279,6 +300,30 @@ AuthenticationResult object has the following fields:
 - `message`: authentication message array, which contains server messages
 - `client`: ldapClient instance
 
+## Active Directory notes
+
+- A typical admin bind DN is a service or admin account, e.g. `cn=Administrator,cn=users,dc=example,dc=com`,
+  or a dedicated LDAP sync account.
+- Username attributes: `sAMAccountName` for logins like `jdoe`, `userPrincipalName` for `jdoe@example.com`.
+  To look a user up by either at once, use
+  `usernameFilter: '(|(sAMAccountName={{username}})(userPrincipalName={{username}}))'`.
+- Set `userSearchBase` to the OU containing the users (e.g. `ou=users,dc=example,dc=com`):
+  the search is faster and avoids `AUTH_RESULT_FAILURE_IDENTITY_AMBIGUOUS`.
+- `fetchUsers()` uses LDAP paged results, so Active Directory's usual 1000-entry limit per search
+  is not an issue (adjust the page size with `pageSize` if needed).
+- Binary attributes such as `thumbnailPhoto` should be requested as `thumbnailPhoto;binary`;
+  they are returned as base64-encoded strings.
+
+## Troubleshooting
+
+| Symptom | Likely cause / fix |
+|---|---|
+| `ECONNREFUSED`, `ETIMEDOUT`, or other connect errors | `ldapOpts.url` is wrong or the server is unreachable. Check the URL, the network/firewall, and `connectTimeout`. |
+| `LdapAuthenticationError` with `admin bind failed` / `user bind failed` | Wrong `adminDn`/`adminPassword`, or `userDn`/`userPassword` in self mode. Verify the bind manually, e.g. `ldapsearch -b dc=example,dc=com -D <dn> -w <password> dn`. |
+| `identity not found` (`AUTH_RESULT_FAILURE_IDENTITY_NOT_FOUND`) | The user does not exist under `userSearchBase`, or `usernameAttribute`/`username`/`usernameFilter` does not match the attribute(s) stored on the server. |
+| `identity ambiguous` (`AUTH_RESULT_FAILURE_IDENTITY_AMBIGUOUS`) | The search matched multiple entries - narrow `userSearchBase` or make the filter more specific. |
+| `Invalid credentials` (`AUTH_RESULT_FAILURE_CREDENTIAL_INVALID`) | The user was found but the password is wrong. |
+| TLS certificate errors | For self-signed certificates use `tlsOptions: { rejectUnauthorized: false }`; add `servername` for SNI. Use `ldaps://` (without `starttls`) or `ldap://` with `starttls: true`. |
 
 ## Old Stuff
 

@@ -48,6 +48,10 @@ const AUTH_RESULT_FAILURE_UNCATEGORIZED = -4
 const DEFAULT_FETCH_USERS_FILTER = '(|(uid=*)(sAMAccountName=*))'
 const DEFAULT_FETCH_USERS_PAGE_SIZE = 1000
 
+/**
+ * Result object returned by {@link authenticateResult}. Inspect `code` (one
+ * of the AUTH_RESULT_* constants) and `messages` to classify failures.
+ */
 class AuthenticationResult {
   #authCode = AUTH_RESULT_FAILURE_UNCATEGORIZED
   #identity
@@ -613,9 +617,20 @@ async function verifyUserExists(
   )
 }
 
-// fetch all users under the search base, using the admin account to search.
-// the search always uses paged results so the common server-side limit of
-// 1000 entries does not apply.
+/**
+ * Fetch all users under `userSearchBase`, using the admin account to search.
+ * No individual username or password is required. The search always uses
+ * LDAP paged results, so the common server-side limit of 1000 entries does
+ * not apply. Returns an empty array if no user matches.
+ *
+ * @param {FetchUsersOptions} options - required: `ldapOpts` (with `url`),
+ *   `adminDn`, `adminPassword`, `userSearchBase`; optional: `userFilter`,
+ *   `attributes`, `explicitBufferAttributes`, `pageSize`, `starttls`.
+ *   See the types in index.d.ts and the README for details.
+ * @returns {Promise<LdapUserEntry[]>} one entry per matched user, each with
+ *   its `dn` and the returned attributes.
+ * @throws {LdapAuthenticationError} if the admin bind or the search fails.
+ */
 async function fetchUsers(options) {
   assert(
     options.ldapOpts && options.ldapOpts.url,
@@ -658,6 +673,22 @@ async function fetchUsers(options) {
   }
 }
 
+/**
+ * Authenticate a user against the LDAP server.
+ *
+ * Modes (see the README for a full option reference):
+ * - Admin mode: `adminDn` + `adminPassword` + `userSearchBase` +
+ *   `usernameAttribute` (or `usernameFilter`) + `username` + `userPassword`.
+ *   The library binds as admin, finds the user's DN, then binds as the user.
+ * - Self mode: `userDn` + `userPassword`. Optionally `userSearchBase` and
+ *   `usernameAttribute` to also return the user's details.
+ * - Verify mode: `verifyUserExists: true` with admin credentials; verifies
+ *   that the user exists without checking the password.
+ *
+ * @param {AuthenticationOptions} options
+ * @returns {Promise<any>} the user object if authentication succeeded.
+ * @throws {LdapAuthenticationError} if authentication failed.
+ */
 async function authenticate(options) {
   const result = await authenticateResult(options)
 
@@ -670,6 +701,15 @@ async function authenticate(options) {
   return result.user
 }
 
+/**
+ * Same options and behavior as {@link authenticate}, but never throws on
+ * authentication failure - it returns an {@link AuthenticationResult} whose
+ * `code` identifies the outcome (useful for custom error handling).
+ *
+ * @param {AuthenticationOptions} options
+ * @returns {Promise<AuthenticationResult>}
+ * @throws {LdapAuthenticationError|Error} only on invalid options or network errors.
+ */
 async function authenticateResult(options) {
   if (!options.userDn) {
     assert(options.adminDn, 'Admin mode adminDn must be provided')
@@ -756,6 +796,7 @@ async function authenticateResult(options) {
   )
 }
 
+/** Thrown by authenticate()/authenticateResult()/fetchUsers() on failure; `message` describes the failure. */
 class LdapAuthenticationError extends Error {
   constructor(message) {
     super(message)

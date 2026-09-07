@@ -37,6 +37,29 @@ declare module 'ldap-authentication' {
     readonly client: any
   }
 
+  /**
+   * A single group entry returned on `user.groups` when group lookup is
+   * enabled (`groupsSearchBase` + `groupClass`). `objectName` mirrors `dn`
+   * for backward compatibility with the old ldapjs-based API.
+   */
+  export interface LdapGroupEntry {
+    dn: string
+    objectName?: string
+    [attr: string]: any
+  }
+
+  /**
+   * A single user object returned by `authenticate()` / `fetchUsers()`.
+   * Always contains the entry's `dn`; other attribute values are
+   * `string`/`string[]` (or a base64 string for `;binary` attributes), and
+   * `groups` is present when group lookup is enabled.
+   */
+  export interface LdapUserEntry {
+    dn: string
+    groups?: LdapGroupEntry[]
+    [attr: string]: any
+  }
+
   export interface FetchUsersOptions {
     ldapOpts: ClientOptions
     adminDn: string
@@ -58,15 +81,23 @@ declare module 'ldap-authentication' {
     starttls?: boolean
   }
 
+  /**
+   * Authenticate a user against the LDAP server. Kept as `Promise<any>` for
+   * backward compatibility; the resolved value has the shape of
+   * {@link LdapUserEntry}. Throws {@link LdapAuthenticationError} on failure.
+   */
   export function authenticate(options: AuthenticationOptions): Promise<any>
+  /** Same options as {@link authenticate} but never throws on failure; returns an {@link AuthenticationResult}. */
   export function authenticateResult(options: AuthenticationOptions): Promise<AuthenticationResult>
 
   /**
    * Bind with the admin account and search all users under `userSearchBase`.
    * The search always uses paged results, so results are not limited by the
    * common server-side limit of 1000 entries.
+   *
+   * Returns an empty array if no user matches the filter.
    */
-  export function fetchUsers(options: FetchUsersOptions): Promise<any[]>
+  export function fetchUsers(options: FetchUsersOptions): Promise<LdapUserEntry[]>
 
   export class LdapAuthenticationError extends Error {
     constructor(message: any)
