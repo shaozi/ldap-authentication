@@ -29,8 +29,13 @@ The specs are integration tests against a seeded OpenLDAP container:
 
 Or all of the above in one shot: `npm run test:local` (`scripts/test-local.sh`).
 
+After changing the seed ldifs, rebuild the container first (`docker compose -f
+docker-compose.yml build`) - `up -d` reuses the existing image and the seed
+data is baked into it at build time.
+
 Seeded data (see `docker/ldap/*.ldif`): domain `dc=example,dc=com`; users
-`cn=gauss` and `cn=einstein` in `ou=users` (both with password `password`); group
+`cn=gauss`, `cn=einstein` and `cn=Doe, John` (uid `doe`, used to test DNs with a
+comma in the CN) in `ou=users` (all with password `password`); group
 `cn=科学A部` in `ou=groups` containing gauss; admin
 `cn=read-only-admin,dc=example,dc=com` (password `password`).
 `test/binary.spec.js` MUTATES the directory (adds `jpegPhoto` to gauss), so spec
@@ -77,16 +82,13 @@ with a single descriptive message, e.g.
    `npm view ldap-authentication@N.N.N`. Note that the npm registry's packument
    can lag the publish by a couple of minutes - check the
    `https://registry.npmjs.org/ldap-authentication` `time`/`versions` before
-   re-publishing. The legacy `publish.yml` workflow also triggers on release and
-   its `npm publish` step fails with E404 because it duplicates the other
-   workflow - that failure is expected/harmless; `publish.yml` is a candidate
-   for deletion.
+   re-publishing.
 
 ## CI
 
 `integration-test.yml` runs on push/PR to `master`: builds the LDAP container from
 `docker-compose.yml`, runs `npm ci` + `npm run test` with `INGITHUB=true` on a
-Node 22.x/24.x matrix. Release events additionally trigger the publish workflows.
+Node 22.x/24.x matrix. Release events trigger `npm-publish.yml` (OIDC publish).
 
 ## When adding a new option
 

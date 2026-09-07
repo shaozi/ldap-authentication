@@ -30,6 +30,20 @@ gidNumber: 1000
 homeDirectory: /home/gauss
 userPassword: {SSHA}u/l8yXCyiWhP3iXpt0UWMyM9ch5sZGFwLXRlc3QtMjAyNg==
 
+# Note: the DN line needs the comma in the RDN value escaped (\,), the
+# attribute value line does not - LDIF values are raw strings, but `dn:` is
+# parsed as LDAP DN syntax (RFC 4514)
+dn: cn=Doe\, John,ou=users,dc=example,dc=com
+objectClass: inetOrgPerson
+objectClass: posixAccount
+cn: Doe, John
+sn: Doe
+uid: doe
+uidNumber: 1002
+gidNumber: 1002
+homeDirectory: /home/doe
+userPassword: {SSHA}u/l8yXCyiWhP3iXpt0UWMyM9ch5sZGFwLXRlc3QtMjAyNg==
+
 dn: cn=einstein,ou=users,dc=example,dc=com
 objectClass: inetOrgPerson
 objectClass: posixAccount

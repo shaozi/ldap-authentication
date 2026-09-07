@@ -1,15 +1,15 @@
 const {
   authenticateResult,
+  LdapAuthenticationError,
   AuthenticationResult,
   AUTH_RESULT_SUCCESS,
   AUTH_RESULT_FAILURE,
   AUTH_RESULT_FAILURE_IDENTITY_NOT_FOUND,
   AUTH_RESULT_FAILURE_IDENTITY_AMBIGUOUS,
   AUTH_RESULT_FAILURE_CREDENTIAL_INVALID,
-  AUTH_RESULT_FAILURE_UNCATEGORIZED
+  AUTH_RESULT_FAILURE_UNCATEGORIZED,
 } = require('../index.js')
-
-const url = process.env.INGITHUB ? 'ldap://localhost:1389' : 'ldap://ldap:1389'
+const { url, adminDn, adminPassword, userSearchBase } = require('./config')
 
 describe('ldap-authentication test return AuthenticationResult', () => {
   it('Use an admin user to check if user exists', async () => {
@@ -17,10 +17,10 @@ describe('ldap-authentication test return AuthenticationResult', () => {
       ldapOpts: {
         url: url,
       },
-      adminDn: 'cn=read-only-admin,dc=example,dc=com',
-      adminPassword: 'password',
+      adminDn: adminDn,
+      adminPassword: adminPassword,
       verifyUserExists: true,
-      userSearchBase: 'dc=example,dc=com',
+      userSearchBase: userSearchBase,
       usernameAttribute: 'uid',
       username: 'gauss',
     }
@@ -36,10 +36,10 @@ describe('ldap-authentication test return AuthenticationResult', () => {
       ldapOpts: {
         url: url,
       },
-      adminDn: 'cn=read-only-admin,dc=example,dc=com',
-      adminPassword: 'password',
+      adminDn: adminDn,
+      adminPassword: adminPassword,
       verifyUserExists: true,
-      userSearchBase: 'dc=example,dc=com',
+      userSearchBase: userSearchBase,
       usernameAttribute: 'uid',
       username: 'gauss',
       attributes: ['uid', 'sn'],
@@ -58,10 +58,10 @@ describe('ldap-authentication test return AuthenticationResult', () => {
       ldapOpts: {
         url: url,
       },
-      adminDn: 'cn=read-only-admin,dc=example,dc=com',
-      adminPassword: 'password',
+      adminDn: adminDn,
+      adminPassword: adminPassword,
       userPassword: 'password',
-      userSearchBase: 'dc=example,dc=com',
+      userSearchBase: userSearchBase,
       usernameAttribute: 'uid',
       username: 'gauss',
     }
@@ -77,10 +77,10 @@ describe('ldap-authentication test return AuthenticationResult', () => {
       ldapOpts: {
         url: url,
       },
-      adminDn: 'cn=read-only-admin,dc=example,dc=com',
-      adminPassword: 'password',
+      adminDn: adminDn,
+      adminPassword: adminPassword,
       userPassword: 'password',
-      userSearchBase: 'dc=example,dc=com',
+      userSearchBase: userSearchBase,
       usernameAttribute: 'uid',
       username: 'gauss',
       attributes: ['uid', 'sn'],
@@ -101,7 +101,7 @@ describe('ldap-authentication test return AuthenticationResult', () => {
       },
       userDn: 'cn=einstein,ou=users,dc=example,dc=com',
       userPassword: 'password',
-      userSearchBase: 'dc=example,dc=com',
+      userSearchBase: userSearchBase,
       usernameAttribute: 'uid',
       username: 'einstein',
     }
@@ -119,7 +119,7 @@ describe('ldap-authentication test return AuthenticationResult', () => {
       },
       userDn: 'cn=einstein,ou=users,dc=example,dc=com',
       userPassword: 'password',
-      userSearchBase: 'dc=example,dc=com',
+      userSearchBase: userSearchBase,
       usernameAttribute: 'uid',
       username: 'einstein',
       attributes: ['uid', 'sn'],
@@ -151,13 +151,13 @@ describe('ldap-authentication test return AuthenticationResult', () => {
       ldapOpts: {
         url: url,
       },
-      adminDn: 'cn=read-only-admin,dc=example,dc=com',
-      adminPassword: 'password',
+      adminDn: adminDn,
+      adminPassword: adminPassword,
       userPassword: 'password',
-      userSearchBase: 'dc=example,dc=com',
+      userSearchBase: userSearchBase,
       usernameAttribute: 'uid',
       username: 'gauss',
-      groupsSearchBase: 'dc=example,dc=com',
+      groupsSearchBase: userSearchBase,
       groupClass: 'groupOfNames',
       groupMemberAttribute: 'member',
       groupMemberUserAttribute: 'dn',
@@ -177,10 +177,10 @@ describe('ldap-authentication test return AuthenticationResult', () => {
       },
       userDn: 'cn=gauss,ou=users,dc=example,dc=com',
       userPassword: 'password',
-      userSearchBase: 'dc=example,dc=com',
+      userSearchBase: userSearchBase,
       usernameAttribute: 'uid',
       username: 'gauss',
-      groupsSearchBase: 'dc=example,dc=com',
+      groupsSearchBase: userSearchBase,
       groupClass: 'groupOfNames',
       groupMemberAttribute: 'member',
       groupMemberUserAttribute: 'dn',
@@ -204,10 +204,10 @@ describe('ldap-authentication test return AuthenticationResult', () => {
       },
       userDn: 'cn=gauss,ou=users,dc=example,dc=com',
       userPassword: 'password',
-      userSearchBase: 'dc=example,dc=com',
+      userSearchBase: userSearchBase,
       usernameAttribute: 'uid',
       username: 'gauss',
-      groupsSearchBase: 'dc=example,dc=com',
+      groupsSearchBase: userSearchBase,
       groupClass: 'groupOfUniqueNames',
     }
 
@@ -228,7 +228,7 @@ describe('ldap-authentication negative test returns AuthenticationResult', () =>
       adminDn: 'cn=not-exist,dc=example,dc=com',
       adminPassword: 'password',
       userPassword: 'password',
-      userSearchBase: 'dc=example,dc=com',
+      userSearchBase: userSearchBase,
       usernameAttribute: 'uid',
       username: 'gauss',
     }
@@ -242,10 +242,10 @@ describe('ldap-authentication negative test returns AuthenticationResult', () =>
       ldapOpts: {
         url: url,
       },
-      adminDn: 'cn=read-only-admin,dc=example,dc=com',
+      adminDn: adminDn,
       adminPassword: 'wrongpassword',
       userPassword: 'password',
-      userSearchBase: 'dc=example,dc=com',
+      userSearchBase: userSearchBase,
       usernameAttribute: 'uid',
       username: 'gauss',
     }
@@ -259,10 +259,10 @@ describe('ldap-authentication negative test returns AuthenticationResult', () =>
       ldapOpts: {
         url: url,
       },
-      adminDn: 'cn=read-only-admin,dc=example,dc=com',
-      adminPassword: 'password',
+      adminDn: adminDn,
+      adminPassword: adminPassword,
       userPassword: 'password',
-      userSearchBase: 'dc=example,dc=com',
+      userSearchBase: userSearchBase,
       usernameAttribute: 'uid',
       username: 'wrong',
     }
@@ -276,10 +276,10 @@ describe('ldap-authentication negative test returns AuthenticationResult', () =>
       ldapOpts: {
         url: url,
       },
-      adminDn: 'cn=read-only-admin,dc=example,dc=com',
-      adminPassword: 'password',
+      adminDn: adminDn,
+      adminPassword: adminPassword,
       userPassword: 'wrongpassword',
-      userSearchBase: 'dc=example,dc=com',
+      userSearchBase: userSearchBase,
       usernameAttribute: 'uid',
       username: 'gauss',
     }
@@ -295,7 +295,7 @@ describe('ldap-authentication negative test returns AuthenticationResult', () =>
       },
       userDn: 'cn=not-exist,dc=example,dc=com',
       userPassword: 'password',
-      userSearchBase: 'dc=example,dc=com',
+      userSearchBase: userSearchBase,
       usernameAttribute: 'uid',
       username: 'gauss',
     }
@@ -311,7 +311,7 @@ describe('ldap-authentication negative test returns AuthenticationResult', () =>
       },
       userDn: 'cn=gauss,dc=example,dc=com',
       userPassword: 'wrongpassword',
-      userSearchBase: 'dc=example,dc=com',
+      userSearchBase: userSearchBase,
       usernameAttribute: 'uid',
       username: 'gauss',
     }
@@ -341,7 +341,7 @@ describe('ldap-authentication negative test returns AuthenticationResult', () =>
       userDn: 'cn=einstein,ou=users,dc=example,dc=com',
       userPassword: 'password',
       usernameAttribute: 'wrongattribute',
-      userSearchBase: 'dc=example,dc=com',
+      userSearchBase: userSearchBase,
       username: 'einstein',
     }
 
@@ -358,7 +358,7 @@ describe('ldap-authentication negative test returns AuthenticationResult', () =>
       userDn: 'uid=einstein,dc=example,dc=com',
       userPassword: 'password',
       usernameAttribute: 'cn',
-      userSearchBase: 'dc=example,dc=com',
+      userSearchBase: userSearchBase,
       username: 'einstein',
     }
 
@@ -375,7 +375,7 @@ describe('ldap-authentication negative test returns AuthenticationResult', () =>
       userDn: 'uid=einstein,dc=example,dc=com',
       userPassword: 'password',
       usernameAttribute: 'cn',
-      userSearchBase: 'dc=example,dc=com',
+      userSearchBase: userSearchBase,
       username: 'einstein',
       starttls: true,
     }
@@ -391,10 +391,10 @@ describe('ldap-authentication negative test returns AuthenticationResult', () =>
       },
       userDn: 'cn=gauss,ou=users,dc=example,dc=com',
       userPassword: 'password',
-      userSearchBase: 'dc=example,dc=com',
+      userSearchBase: userSearchBase,
       usernameAttribute: 'uid',
       username: 'gauss',
-      groupsSearchBase: 'dc=example,dc=com',
+      groupsSearchBase: userSearchBase,
       groupClass: 'groupOfNames',
       groupMemberAttribute: 'member',
       groupMemberUserAttribute: 'dnWRONG',
@@ -404,6 +404,47 @@ describe('ldap-authentication negative test returns AuthenticationResult', () =>
     expect(result).toBeInstanceOf(AuthenticationResult)
     expect(result.user).toBeTruthy()
     expect(result.user.groups.length).toBeLessThan(1)
+  })
+  it('A username containing LDAP filter metacharacters must not change the filter', async () => {
+    // The filter below would match every user (`(uid=*)`) if the username
+    // were interpolated without escaping; escaping turns it into a literal
+    // search that matches nobody
+    let options = {
+      ldapOpts: {
+        url: url,
+      },
+      adminDn: adminDn,
+      adminPassword: adminPassword,
+      userPassword: 'password',
+      userSearchBase: userSearchBase,
+      usernameFilter: '(uid={{username}})',
+      username: 'gauss)(uid=*)',
+    }
+
+    let result = await authenticateResult(options)
+    expect(result).toBeInstanceOf(AuthenticationResult)
+    expect(result.code).toEqual(AUTH_RESULT_FAILURE_IDENTITY_NOT_FOUND)
+  })
+  it('Missing required options should throw LdapAuthenticationError', async () => {
+    let e = null
+    try {
+      await authenticateResult({
+        ldapOpts: {
+          url: url,
+        },
+        verifyUserExists: true,
+        adminDn: adminDn,
+        userSearchBase: userSearchBase,
+        usernameAttribute: 'uid',
+        username: 'gauss',
+      })
+    } catch (error) {
+      e = error
+    }
+
+    expect(e).toBeTruthy()
+    expect(e).toBeInstanceOf(LdapAuthenticationError)
+    expect(e.message).toContain('adminPassword')
   })
 })
 

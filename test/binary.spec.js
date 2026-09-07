@@ -1,22 +1,23 @@
-const { Change } = require('ldapts')
-const { authenticate, LdapAuthenticationError } = require('../index.js')
+const fs = require('fs')
+const path = require('path')
+const { Change, Attribute } = require('ldapts')
+const { authenticate } = require('../index.js')
 const ldapts = require('ldapts')
-const { Attribute } = require('ldapts')
+const { url, adminDn, adminPassword, userSearchBase } = require('./config')
 
-const url = process.env.INGITHUB ? 'ldap://localhost:1389' : 'ldap://ldap:1389'
+const jpegPhotoBase64 = fs
+  .readFileSync(path.join(__dirname, 'fixtures', 'jpeg-photo.b64'), 'utf8')
+  .trim()
 
 describe('ldap-authentication binary attributes test', () => {
-  const jpegPhotoBase64 =
-    '/9j/4AAQSkZJRgABAQEASABIAAD/2wBDACgcHiMeGSgjISMtKygwPGRBPDc3PHtYXUlkkYCZlo+AjIqgtObDoKrarYqMyP/L2u71////m8H////6/+b9//j/2wBDASstLTw1PHZBQXb4pYyl+Pj4+Pj4+Pj4+Pj4+Pj4+Pj4+Pj4+Pj4+Pj4+Pj4+Pj4+Pj4+Pj4+Pj4+Pj4+Pj4+Pj/wAARCACBAGQDAREAAhEBAxEB/8QAGQAAAwEBAQAAAAAAAAAAAAAAAAECAwQF/8QALRAAAgEDAwMCBQQDAAAAAAAAAAECAxEhBBIxMkFRInEFE2GBsRU0QlJikaH/xAAXAQEBAQEAAAAAAAAAAAAAAAAAAQID/8QAGxEBAQEAAwEBAAAAAAAAAAAAAAERAhIhMUH/2gAMAwEAAhEDEQA/APMIAAKAgChp2AdwAAACBlAQUkmu5RkAAACuAAADsAZQDWQKRA7AL7gAEFCbAQDAYAAXAdwBYAogAAAAgokBgADAEr8Ab09JWqZcdq8yJpjb9Pa5qr/ROy4l6Ga6ZxfvgdoYiemqw6o49yoyAAACCiQKa4AAN9PpnWy3aP5Jbiya9ClRhBJRjby/Ji1qRqRQBMkuwMZSk2trdiys2PPqR2zaNspAAIKE0A+yA201H51TPSuSW4smvTilFJJWSOdbi0RTZQghPgK56nNwzXLXtvx4NxhiUAEABQ0nJpJcgejpkoR2rtyznWo3uRpE5S4i8hfRCrPKm0wLlUUUrgZSruXTD/oROZPISuat1s3GGRQgIKADp0kFNy8pYM2rJrshBQ4M1qNErojTOdFyjZTcfqhKWaqFPObuyAdeKlBfRhcZrT01JzXdWsXWc/U7XF5IVlqWm1waYczKhXKIKEB0aOW2uvDwZvxZ9ejbBlq+CLsZaWrMAckvSgpSW6DQVNKW6ObXRUTVd5BmuKp1M05s2USBmaABpS60Qeg41rqUXeMcszjW61auroliyi7sZaFk1YKirVnSVopyXkqajTNtSv3YouXU/oWM8nHLLZWENFCsBiaAB1aCj86tnpjlko9javBlUVY29SWO4VizNaiVBJcu/m5FJwvyFTGmqct+Como3Juz5EZrnZplLKhWAw5NDZxisW47gen8NpqOncsepmarrIBZwwOWunSf+L4ZmxqVnvI1puoU1nObs347BLS7FZLZ8x27sIwqQcJuMuUaRAGdKN5X8ZKHJu+Qrq02venpbNilnGbDB3UNXHUJ7dqmv4szfA46luVnTbf0ZNFyqUpxcKnpv2kUclWiqT9LvF8O5mtRNnZO+ChSTccAOzsGShVhSlullrhFHPObnNyfLKiAHQW2lKfngqxk3dgSyhwm4TUk3dPDIPV0OrhWltmlGr2fkxYrqrUVVg0+ez8GdHPGhLa0/uaRMFeW1K9wrd6e7vJ2XhFRjKnGqtlNtPyyTB5MrqV28nRFxnf3JgogSqp0FBKzRVZlAEKKyFCbjO6eUQexotaq6UKjtUXf+xz5ccWOmas91u2RKVjHZSlaTe210yoipqHNbY3UfyTVEI7nbyUc+r0vLiuFc1Kjz7WNItSxkmCShAAAgCeXewURbTusNBHs6LWRrpQqO1T8nOzGmtamnG1unK9gM4UknfgqNYxSzZsBuTtiOL2ZKPJ1lFU6zt0yymblRhYonuQD4KEAAOXIUkEa6f8AcQ90Sq92r2+5zioXWvY0jQqJkRXn/EeiHuywcS4NI//Z'
-
   const baseOptions = {
     ldapOpts: {
       url: url,
     },
-    adminDn: 'cn=read-only-admin,dc=example,dc=com',
-    adminPassword: 'password',
+    adminDn: adminDn,
+    adminPassword: adminPassword,
     verifyUserExists: true,
-    userSearchBase: 'dc=example,dc=com',
+    userSearchBase: userSearchBase,
     usernameAttribute: 'uid',
   }
 

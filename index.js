@@ -1,6 +1,6 @@
-const assert = require('assert')
 const ldapts = require('ldapts')
-// escape the , in CN in DN
+
+// escape the , in the value of the first RDN of a DN
 function _ldapEscapeDN(s) {
   let ret = ''
   let comaPositions = []
@@ -47,6 +47,27 @@ const AUTH_RESULT_FAILURE_UNCATEGORIZED = -4
 
 const DEFAULT_FETCH_USERS_FILTER = '(|(uid=*)(sAMAccountName=*))'
 const DEFAULT_FETCH_USERS_PAGE_SIZE = 1000
+
+/**
+ * Thrown by authenticate()/authenticateResult()/fetchUsers() on failure.
+ * `message` describes the failure; `code` (when set) is one of the
+ * AUTH_RESULT_* constants, mirroring the outcome that authenticateResult()
+ * reports for the same failure. Missing required options also throw this
+ * error, with all the missing fields listed in `message`.
+ */
+class LdapAuthenticationError extends Error {
+  constructor(message, code) {
+    super(message)
+    // Ensure the name of this error is the same as the class name
+    this.name = this.constructor.name
+    if (code !== undefined) {
+      this.code = code
+    }
+    // This clips the constructor invocation from the stack trace.
+    // It's not absolutely essential, but it does make the stack trace a little nicer.
+    Error.captureStackTrace(this, this.constructor)
+  }
+}
 
 /**
  * Result object returned by {@link authenticateResult}. Inspect `code` (one
@@ -97,11 +118,17 @@ const authenticationMessages = {
   AUTH_RESULT_FAILURE_UNCATEGORIZED: 'Uncategorized authentication failure',
 }
 
-// bind and return the ldap client
-async function _ldapBind(dn, password, starttls, ldapOpts) {
-  // TODO: check if ldapts expects escaped dn or not (possible double escaping problems?)
+// bind with (dn, password) and return the connected ldap client.
+// If the connection or the bind fails, the client is unbound again before
+// the error is rethrown, so callers never leak a connected socket.
+async function _ldapBind(dn, password, { starttls, ldapOpts }) {
+  // ldapts passes a string DN through to the server as-is (no escaping is
+  // done by ldapts), so the value of the first RDN is escaped here (a DN
+  // like `cn=Doe, John,ou=users,...` would otherwise be parsed by the server
+  // as three RDNs instead of one)
   dn = _ldapEscapeDN(dn)
-  ldapOpts.connectTimeout = ldapOpts.connectTimeout || 5000
+  const opts = { ...ldapOpts }
+  opts.connectTimeout = ldapOpts.connectTimeout || 5000
 
   // When using StartTLS, we need to exclude tlsOptions from the Client constructor
   // and only pass them to the startTLS() method to avoid connection conflicts.
@@ -109,74 +136,93 @@ async function _ldapBind(dn, password, starttls, ldapOpts) {
   // - For LDAPS (ldaps://): pass tlsOptions to Client constructor
   // - For StartTLS (ldap://): do NOT pass tlsOptions to Client constructor, only to startTLS()
   // - For plain LDAP (ldap://): do NOT pass tlsOptions to Client constructor
-  let clientOpts = ldapOpts
-  const isLdaps = ldapOpts.url && ldapOpts.url.startsWith('ldaps://')
-
-  // Only pass tlsOptions to Client constructor if using ldaps:// protocol
-  // For ldap:// protocol (plain or StartTLS), exclude tlsOptions from constructor
-  if (!isLdaps && ldapOpts.tlsOptions) {
-    // Create a shallow copy of ldapOpts without tlsOptions for the Client constructor
-    const { tlsOptions, ...optsWithoutTls } = ldapOpts
-    clientOpts = optsWithoutTls
+  const isLdaps = opts.url && opts.url.startsWith('ldaps://')
+  if (!isLdaps) {
+    delete opts.tlsOptions
   }
 
-  let client = new ldapts.Client(clientOpts)
-
-  if (starttls) {
-    await client.startTLS(ldapOpts.tlsOptions)
+  const client = new ldapts.Client(opts)
+  try {
+    if (starttls) {
+      await client.startTLS(ldapOpts.tlsOptions)
+    }
+    await client.bind(dn, password)
+  } catch (error) {
+    if (client.isConnected) {
+      try {
+        await client.unbind()
+      } catch (unbindError) {
+        // the socket was probably already closed; nothing else to do
+      }
+    }
+    throw error
   }
-
-  await client.bind(dn, password)
   ldapOpts.log && ldapOpts.log.trace('bind success!')
   return client
 }
 
-// replace username in filter
-
+// convert attribute values that ldapts returned as Buffer (attributes with
+// a `;binary` suffix, or the ones listed in explicitBufferAttributes) into
+// base64 strings
+function _toBase64Attributes(user, attributes, explicitBufferAttributes) {
+  if (user == null) {
+    return
+  }
+  // when attribute endwith ;binary, ldapts returns Buffer, we convert them into base64 string
+  if (attributes != null) {
+    for (let attr of attributes) {
+      if (attr.endsWith(';binary') && Buffer.isBuffer(user[attr])) {
+        user[attr] = user[attr].toString('base64')
+      }
+    }
+  }
+  // when attribute is one of the explicitBufferAttributes, should convert to base64 string
+  if (explicitBufferAttributes != null) {
+    for (let attr of explicitBufferAttributes) {
+      if (Buffer.isBuffer(user[attr])) {
+        user[attr] = user[attr].toString('base64')
+      }
+    }
+  }
+}
 
 // search a user and return the object
-async function _searchUser(
-  ldapClient,
-  searchBase,
-  usernameFilter,
-  usernameAttribute,
-  username,
-  attributes = null,
-  explicitBufferAttributes = null
-) {
-  let filter;
-  if(usernameFilter){
-    filter = usernameFilter.replaceAll("{{username}}",username.replaceAll(/[&|!*()]/g,""));
-  }
-  else{
+async function _searchUser(client, options) {
+  const {
+    userSearchBase,
+    usernameFilter,
+    usernameAttribute,
+    username,
+    attributes = null,
+    explicitBufferAttributes = null,
+  } = options
+
+  let filter
+  if (usernameFilter) {
+    // replace `{{username}}` with the RFC 2254-escaped username, so LDAP
+    // filter metacharacters inside the username cannot change the structure
+    // of the filter
+    filter = usernameFilter.replaceAll('{{username}}', ldapts.Filter.escape(username))
+  } else {
     filter = new ldapts.EqualityFilter({
       attribute: usernameAttribute,
       value: username,
     })
   }
-  
+
   let searchOptions = {
     filter: filter,
     scope: 'sub',
-    attributes: attributes,
   }
   if (attributes) {
     searchOptions.attributes = attributes
   }
-  if(explicitBufferAttributes) {
+  if (explicitBufferAttributes) {
     searchOptions.explicitBufferAttributes = explicitBufferAttributes
   }
 
   // TODO: we don't support reference yet
-  // If the server was able to locate the entry referred to by the baseObject
-  // but could not search one or more non-local entries,
-  // the server may return one or more SearchResultReference messages,
-  // each containing a reference to another set of servers for continuing the operation.
-  // referral.uris
-  const { searchEntries, searchReferences } = await ldapClient.search(
-    searchBase,
-    searchOptions
-  )
+  const { searchEntries } = await client.search(userSearchBase, searchOptions)
 
   let user
   if (
@@ -185,64 +231,52 @@ async function _searchUser(
     !searchEntries[0] ||
     !searchEntries[0].dn
   ) {
+    user = null
+  } else if (searchEntries.length > 1) {
+    return new AuthenticationResult(
+      AUTH_RESULT_FAILURE_IDENTITY_AMBIGUOUS,
+      username,
+      null,
+      [authenticationMessages.AUTH_RESULT_FAILURE_IDENTITY_AMBIGUOUS],
+      client
+    )
+  } else {
+    user = searchEntries[0]
+  }
+
+  if (!user) {
     return new AuthenticationResult(
       AUTH_RESULT_FAILURE_IDENTITY_NOT_FOUND,
       username,
       null,
       [authenticationMessages.AUTH_RESULT_FAILURE_IDENTITY_NOT_FOUND],
-      ldapClient
+      client
     )
-  } else {
-    if (searchEntries.length > 1) {
-      return new AuthenticationResult(
-        AUTH_RESULT_FAILURE_IDENTITY_AMBIGUOUS,
-        username,
-        null,
-        [authenticationMessages.AUTH_RESULT_FAILURE_IDENTITY_AMBIGUOUS],
-        ldapClient
-      )
-    }
-
-    user = searchEntries[0]
   }
 
-  // when attribute endwith ;binary, ldapts returns Buffer, we convert them into base64 string
-  if (user != null && attributes != null) {
-    for (let attr of attributes) {
-      if (attr.endsWith(';binary') && Buffer.isBuffer(user[attr])) {
-        user[attr] = user[attr].toString('base64')
-      }
-    }
-  }
-  // when attribute is one of the explicitBufferAttributes, should convert to base64 string
-  if (user != null && explicitBufferAttributes != null) {
-    for (let attr of explicitBufferAttributes) {
-      if (Buffer.isBuffer(user[attr])) {
-        user[attr] = user[attr].toString('base64')
-      }
-    }
-  }
-
+  _toBase64Attributes(user, attributes, explicitBufferAttributes)
   return new AuthenticationResult(
     AUTH_RESULT_SUCCESS,
     username,
     user,
     [authenticationMessages.AUTH_RESULT_SUCCESS],
-    ldapClient
+    client
   )
 }
 
-// search a groups which user is member
-async function _searchUserGroups(
-  ldapClient,
-  searchBase,
-  user,
-  groupClass,
-  groupMemberAttribute = 'member',
-  groupMemberUserAttribute = 'dn'
-) {
-  // Below works, but prefer using ldapts Filter subclasses to build this search, so that correct escaping is done
-  // const filter = `(&(objectclass=${groupClass})(${groupMemberAttribute}=${user[groupMemberUserAttribute]}))`
+// search the groups which user is member and attach them to user.groups;
+// does nothing when group lookup is not configured
+async function _attachGroups(client, user, options) {
+  const {
+    groupsSearchBase,
+    groupClass,
+    groupMemberAttribute = 'member',
+    groupMemberUserAttribute = 'dn',
+  } = options
+  if (!groupsSearchBase || !groupClass || !groupMemberAttribute) {
+    return
+  }
+
   const filter = new ldapts.AndFilter({
     filters: [
       new ldapts.EqualityFilter({
@@ -256,20 +290,12 @@ async function _searchUserGroups(
     ],
   })
 
-  const { searchEntries, searchReferences } = await ldapClient.search(
-    searchBase,
-    {
-      filter: filter,
-      scope: 'sub',
-    }
-  )
+  const { searchEntries } = await client.search(groupsSearchBase, {
+    filter: filter,
+    scope: 'sub',
+  })
 
-  let groups
-  if (!searchEntries || searchEntries.length < 1) {
-    groups = []
-  } else {
-    groups = searchEntries
-  }
+  let groups = searchEntries || []
   // ldapjs has group.objectName, ldapts does not have it. instead, use dn
   // add objectName back for backward compatibility
   for (let group of groups) {
@@ -277,22 +303,21 @@ async function _searchUserGroups(
       group.objectName = group.dn
     }
   }
-  return groups
+  user.groups = groups
 }
 
 // search all users under the search base and return the list of user objects
-async function _fetchAllUsers(
-  ldapClient,
-  searchBase,
-  userFilter,
-  attributes = null,
-  explicitBufferAttributes = null,
-  pageSize = DEFAULT_FETCH_USERS_PAGE_SIZE
-) {
-  let filter = userFilter || DEFAULT_FETCH_USERS_FILTER
+async function _fetchAllUsers(client, options) {
+  const {
+    userSearchBase,
+    userFilter,
+    attributes = null,
+    explicitBufferAttributes = null,
+    pageSize = DEFAULT_FETCH_USERS_PAGE_SIZE,
+  } = options
 
   let searchOptions = {
-    filter: filter,
+    filter: userFilter || DEFAULT_FETCH_USERS_FILTER,
     scope: 'sub',
     // always use paged results, so more than the usual server-side limit
     // (usually 1000 entries per page) can be returned
@@ -305,60 +330,24 @@ async function _fetchAllUsers(
     searchOptions.explicitBufferAttributes = explicitBufferAttributes
   }
 
-  const { searchEntries } = await ldapClient.search(searchBase, searchOptions)
+  const { searchEntries } = await client.search(userSearchBase, searchOptions)
 
   let users = searchEntries || []
-  // when attribute endwith ;binary, ldapts returns Buffer, we convert them into base64 string
   for (let user of users) {
-    if (user != null && attributes != null) {
-      for (let attr of attributes) {
-        if (attr.endsWith(';binary') && Buffer.isBuffer(user[attr])) {
-          user[attr] = user[attr].toString('base64')
-        }
-      }
-    }
-    // when attribute is one of the explicitBufferAttributes, should convert to base64 string
-    if (user != null && explicitBufferAttributes != null) {
-      for (let attr of explicitBufferAttributes) {
-        if (Buffer.isBuffer(user[attr])) {
-          user[attr] = user[attr].toString('base64')
-        }
-      }
-    }
+    _toBase64Attributes(user, attributes, explicitBufferAttributes)
   }
   return users
 }
 
-async function authenticateWithAdmin(
-  adminDn,
-  adminPassword,
-  userSearchBase,
-  usernameFilter,
-  usernameAttribute,
-  username,
-  userPassword,
-  starttls,
-  ldapOpts,
-  groupsSearchBase,
-  groupClass,
-  groupMemberAttribute = 'member',
-  groupMemberUserAttribute = 'dn',
-  attributes = null,
-  explicitBufferAttributes = null
-) {
+async function authenticateWithAdmin(options) {
+  const { username, ldapOpts } = options
   let ldapAdminClient
   try {
-    ldapAdminClient = await _ldapBind(
-      adminDn,
-      adminPassword,
-      starttls,
-      ldapOpts
-    )
+    ldapAdminClient = await _ldapBind(options.adminDn, options.adminPassword, {
+      starttls: options.starttls,
+      ldapOpts,
+    })
   } catch (error) {
-    if (ldapAdminClient && ldapAdminClient.isConnected) {
-      await ldapAdminClient.unbind()
-    }
-
     return new AuthenticationResult(
       AUTH_RESULT_FAILURE,
       username,
@@ -368,96 +357,69 @@ async function authenticateWithAdmin(
     )
   }
 
-  let searchResult = await _searchUser(
-    ldapAdminClient,
-    userSearchBase,
-    usernameFilter,
-    usernameAttribute,
-    username,
-    attributes,
-    explicitBufferAttributes
-  )
-
-  let user = searchResult.user
-
-  if (!user || !user.dn) {
-    ldapOpts.log &&
-      ldapOpts.log.trace(
-        `admin did not find user! (${usernameAttribute}=${username})`
-      )
-    await ldapAdminClient.unbind()
-    return new AuthenticationResult(
-      AUTH_RESULT_FAILURE_IDENTITY_NOT_FOUND,
-      username,
-      null,
-      [authenticationMessages.AUTH_RESULT_FAILURE_IDENTITY_NOT_FOUND],
-      ldapAdminClient
-    )
-  }
-  let userDn = user.dn
-  let ldapUserClient
   try {
-    ldapUserClient = await _ldapBind(userDn, userPassword, starttls, ldapOpts)
-  } catch (error) {
-    if (ldapUserClient && ldapUserClient.isConnected) {
+    let searchResult = await _searchUser(ldapAdminClient, options)
+
+    let user = searchResult.user
+
+    if (!user || !user.dn) {
+      ldapOpts.log &&
+        ldapOpts.log.trace(
+          `admin did not find user! (${options.usernameAttribute}=${username})`
+        )
+      return new AuthenticationResult(
+        AUTH_RESULT_FAILURE_IDENTITY_NOT_FOUND,
+        username,
+        null,
+        [authenticationMessages.AUTH_RESULT_FAILURE_IDENTITY_NOT_FOUND],
+        ldapAdminClient
+      )
+    }
+    let userDn = user.dn
+    let ldapUserClient
+    try {
+      ldapUserClient = await _ldapBind(userDn, options.userPassword, {
+        starttls: options.starttls,
+        ldapOpts,
+      })
+    } catch (error) {
+      return new AuthenticationResult(
+        AUTH_RESULT_FAILURE_CREDENTIAL_INVALID,
+        username,
+        null,
+        [
+          authenticationMessages.AUTH_RESULT_FAILURE_CREDENTIAL_INVALID,
+          error.message || 'invalid credentials',
+        ],
+        ldapAdminClient
+      )
+    }
+    try {
+      await _attachGroups(ldapAdminClient, user, options)
+      return new AuthenticationResult(
+        AUTH_RESULT_SUCCESS,
+        username,
+        user,
+        [authenticationMessages.AUTH_RESULT_SUCCESS],
+        ldapAdminClient
+      )
+    } finally {
       await ldapUserClient.unbind()
     }
-
-    return new AuthenticationResult(
-      AUTH_RESULT_FAILURE_CREDENTIAL_INVALID,
-      username,
-      null,
-      [authenticationMessages.AUTH_RESULT_FAILURE_CREDENTIAL_INVALID, error.message || 'invalid credentials'],
-      ldapAdminClient
-    )
+  } finally {
+    await ldapAdminClient.unbind()
   }
-  if (groupsSearchBase && groupClass && groupMemberAttribute) {
-    let groups = await _searchUserGroups(
-      ldapAdminClient,
-      groupsSearchBase,
-      user,
-      groupClass,
-      groupMemberAttribute,
-      groupMemberUserAttribute
-    )
-    user.groups = groups
-  }
-  await ldapAdminClient.unbind()
-  await ldapUserClient.unbind()
-
-  return new AuthenticationResult(
-    AUTH_RESULT_SUCCESS,
-    username,
-    user,
-    [authenticationMessages.AUTH_RESULT_SUCCESS],
-    ldapAdminClient
-  )
 }
 
-async function authenticateWithUser(
-  userDn,
-  userSearchBase,
-  usernameFilter,
-  usernameAttribute,
-  username,
-  userPassword,
-  starttls,
-  ldapOpts,
-  groupsSearchBase,
-  groupClass,
-  groupMemberAttribute = 'member',
-  groupMemberUserAttribute = 'dn',
-  attributes = null,
-  explicitBufferAttributes = null
-) {
+async function authenticateWithUser(options) {
+  const { username, usernameAttribute, userSearchBase, ldapOpts } = options
   let ldapUserClient
   try {
-    ldapUserClient = await _ldapBind(userDn, userPassword, starttls, ldapOpts)
+    ldapUserClient = await _ldapBind(options.userDn, options.userPassword, {
+      starttls: options.starttls,
+      ldapOpts,
+    })
   } catch (error) {
-    if (ldapUserClient && ldapUserClient.isConnected) {
-      await ldapUserClient.unbind()
-    }
-
     return new AuthenticationResult(
       AUTH_RESULT_FAILURE,
       username,
@@ -466,98 +428,61 @@ async function authenticateWithUser(
       ldapUserClient
     )
   }
-  if (!usernameAttribute || !userSearchBase) {
-    // if usernameAttribute is not provided, no user detail is needed.
-    await ldapUserClient.unbind()
+  try {
+    if (!usernameAttribute || !userSearchBase) {
+      // if usernameAttribute is not provided, no user detail is needed.
+      return new AuthenticationResult(
+        AUTH_RESULT_SUCCESS,
+        username,
+        {},
+        [authenticationMessages.AUTH_RESULT_SUCCESS],
+        ldapUserClient
+      )
+    }
+
+    let searchResult = await _searchUser(ldapUserClient, options)
+
+    let user = searchResult.user
+
+    if (!user || !user.dn) {
+      ldapOpts.log &&
+        ldapOpts.log.trace(
+          `user logged in, but user details could not be found. (${usernameAttribute}=${username}). Probabaly wrong attribute or searchBase?`
+        )
+      return new AuthenticationResult(
+        AUTH_RESULT_FAILURE,
+        username,
+        null,
+        [
+          authenticationMessages.AUTH_RESULT_FAILURE,
+          'user logged in, but user details could not be found. Probabaly usernameAttribute or userSearchBase is wrong?',
+        ],
+        ldapUserClient
+      )
+    }
+    await _attachGroups(ldapUserClient, user, options)
+
     return new AuthenticationResult(
       AUTH_RESULT_SUCCESS,
       username,
-      {},
+      user,
       [authenticationMessages.AUTH_RESULT_SUCCESS],
       ldapUserClient
     )
-  }
-
-  let searchResult = await _searchUser(
-    ldapUserClient,
-    userSearchBase,
-    usernameFilter,
-    usernameAttribute,
-    username,
-    attributes,
-    explicitBufferAttributes
-  )
-
-  let user = searchResult.user
-
-  if (!user || !user.dn) {
-    ldapOpts.log &&
-      ldapOpts.log.trace(
-        `user logged in, but user details could not be found. (${usernameAttribute}=${username}). Probabaly wrong attribute or searchBase?`
-      )
+  } finally {
     await ldapUserClient.unbind()
-
-    return new AuthenticationResult(
-      AUTH_RESULT_FAILURE,
-      username,
-      null,
-      [
-        authenticationMessages.AUTH_RESULT_FAILURE,
-        'user logged in, but user details could not be found. Probabaly usernameAttribute or userSearchBase is wrong?',
-      ],
-      ldapUserClient
-    )
   }
-  if (groupsSearchBase && groupClass && groupMemberAttribute) {
-    let groups = await _searchUserGroups(
-      ldapUserClient,
-      groupsSearchBase,
-      user,
-      groupClass,
-      groupMemberAttribute,
-      groupMemberUserAttribute
-    )
-    user.groups = groups
-  }
-  await ldapUserClient.unbind()
-
-  return new AuthenticationResult(
-    AUTH_RESULT_SUCCESS,
-    username,
-    user,
-    [authenticationMessages.AUTH_RESULT_SUCCESS],
-    ldapUserClient
-  )
 }
 
-async function verifyUserExists(
-  adminDn,
-  adminPassword,
-  userSearchBase,
-  usernameFilter,
-  usernameAttribute,
-  username,
-  starttls,
-  ldapOpts,
-  groupsSearchBase,
-  groupClass,
-  groupMemberAttribute = 'member',
-  groupMemberUserAttribute = 'dn',
-  attributes = null,
-  explicitBufferAttributes = null
-) {
+async function verifyUserExists(options) {
+  const { username, ldapOpts } = options
   let ldapAdminClient
   try {
-    ldapAdminClient = await _ldapBind(
-      adminDn,
-      adminPassword,
-      starttls,
-      ldapOpts
-    )
+    ldapAdminClient = await _ldapBind(options.adminDn, options.adminPassword, {
+      starttls: options.starttls,
+      ldapOpts,
+    })
   } catch (error) {
-    if (ldapAdminClient && ldapAdminClient.isConnected) {
-      await ldapAdminClient.unbind()
-    }
     return new AuthenticationResult(
       AUTH_RESULT_FAILURE,
       username,
@@ -567,54 +492,79 @@ async function verifyUserExists(
     )
   }
 
-  let searchResult = await _searchUser(
-    ldapAdminClient,
-    userSearchBase,
-    usernameFilter,
-    usernameAttribute,
-    username,
-    attributes,
-    explicitBufferAttributes
-  )
+  try {
+    let searchResult = await _searchUser(ldapAdminClient, options)
 
-  let user = searchResult.user
+    let user = searchResult.user
 
-  if (!user || !user.dn) {
-    ldapOpts.log &&
-      ldapOpts.log.trace(
-        `admin did not find user! (${usernameAttribute}=${username})`
+    if (!user || !user.dn) {
+      ldapOpts.log &&
+        ldapOpts.log.trace(
+          `admin did not find user! (${options.usernameAttribute}=${username})`
+        )
+      return new AuthenticationResult(
+        AUTH_RESULT_FAILURE_IDENTITY_NOT_FOUND,
+        username,
+        null,
+        [
+          authenticationMessages.AUTH_RESULT_FAILURE_IDENTITY_NOT_FOUND,
+          'user not found or usernameAttribute is wrong',
+        ],
+        ldapAdminClient
       )
-    await ldapAdminClient.unbind()
+    }
+    await _attachGroups(ldapAdminClient, user, options)
     return new AuthenticationResult(
-      AUTH_RESULT_FAILURE_IDENTITY_NOT_FOUND,
+      AUTH_RESULT_SUCCESS,
       username,
-      null,
-      [
-        authenticationMessages.AUTH_RESULT_FAILURE_IDENTITY_NOT_FOUND,
-        'user not found or usernameAttribute is wrong'
-      ],
+      user,
+      [authenticationMessages.AUTH_RESULT_SUCCESS],
       ldapAdminClient
     )
+  } finally {
+    await ldapAdminClient.unbind()
   }
-  if (groupsSearchBase && groupClass && groupMemberAttribute) {
-    let groups = await _searchUserGroups(
-      ldapAdminClient,
-      groupsSearchBase,
-      user,
-      groupClass,
-      groupMemberAttribute,
-      groupMemberUserAttribute
+}
+
+// validate the options of authenticate()/authenticateResult() and throw a
+// single LdapAuthenticationError listing all missing fields at once
+function _validateOptions(options) {
+  if (!options) {
+    throw new LdapAuthenticationError('authenticate: options object is required')
+  }
+
+  let missing = []
+  if (!options.ldapOpts || !options.ldapOpts.url) {
+    missing.push('ldapOpts.url')
+  }
+
+  if (options.verifyUserExists) {
+    if (!options.adminDn) missing.push('adminDn')
+    if (!options.adminPassword) missing.push('adminPassword')
+    if (!options.userSearchBase) missing.push('userSearchBase')
+    if (!options.usernameAttribute && !options.usernameFilter) {
+      missing.push('usernameAttribute or usernameFilter')
+    }
+    if (!options.username) missing.push('username')
+  } else if (options.adminDn) {
+    if (!options.adminPassword) missing.push('adminPassword')
+    if (!options.userSearchBase) missing.push('userSearchBase')
+    if (!options.usernameAttribute && !options.usernameFilter) {
+      missing.push('usernameAttribute or usernameFilter')
+    }
+    if (!options.username) missing.push('username')
+    if (!options.userPassword) missing.push('userPassword')
+  } else if (options.userDn) {
+    if (!options.userPassword) missing.push('userPassword')
+  } else {
+    missing.push('adminDn or userDn')
+  }
+
+  if (missing.length > 0) {
+    throw new LdapAuthenticationError(
+      `authenticate: missing required option(s): ${missing.join(', ')}`
     )
-    user.groups = groups
   }
-  await ldapAdminClient.unbind()
-  return new AuthenticationResult(
-    AUTH_RESULT_SUCCESS,
-    username,
-    user,
-    [authenticationMessages.AUTH_RESULT_SUCCESS],
-    ldapAdminClient
-  )
 }
 
 /**
@@ -629,45 +579,37 @@ async function verifyUserExists(
  *   See the types in index.d.ts and the README for details.
  * @returns {Promise<LdapUserEntry[]>} one entry per matched user, each with
  *   its `dn` and the returned attributes.
- * @throws {LdapAuthenticationError} if the admin bind or the search fails.
+ * @throws {LdapAuthenticationError} if required options are missing, or if
+ *   the admin bind or the search fails.
  */
 async function fetchUsers(options) {
-  assert(
-    options.ldapOpts && options.ldapOpts.url,
-    'fetchUsers: ldapOpts.url must be provided'
-  )
-  assert(options.adminDn, 'fetchUsers: adminDn must be provided')
-  assert(options.adminPassword, 'fetchUsers: adminPassword must be provided')
-  assert(options.userSearchBase, 'fetchUsers: userSearchBase must be provided')
+  let missing = []
+  if (!options.ldapOpts || !options.ldapOpts.url) missing.push('ldapOpts.url')
+  if (!options.adminDn) missing.push('adminDn')
+  if (!options.adminPassword) missing.push('adminPassword')
+  if (!options.userSearchBase) missing.push('userSearchBase')
+  if (missing.length > 0) {
+    throw new LdapAuthenticationError(
+      `fetchUsers: missing required option(s): ${missing.join(', ')}`
+    )
+  }
 
   let ldapAdminClient
   try {
-    ldapAdminClient = await _ldapBind(
-      options.adminDn,
-      options.adminPassword,
-      options.starttls,
-      options.ldapOpts
-    )
+    ldapAdminClient = await _ldapBind(options.adminDn, options.adminPassword, {
+      starttls: options.starttls,
+      ldapOpts: options.ldapOpts,
+    })
   } catch (error) {
-    if (ldapAdminClient && ldapAdminClient.isConnected) {
-      await ldapAdminClient.unbind()
-    }
     throw new LdapAuthenticationError(error.message || 'admin bind failed')
   }
 
   try {
-    return await _fetchAllUsers(
-      ldapAdminClient,
-      options.userSearchBase,
-      options.userFilter,
-      options.attributes,
-      options.explicitBufferAttributes,
-      options.pageSize || DEFAULT_FETCH_USERS_PAGE_SIZE
-    )
+    return await _fetchAllUsers(ldapAdminClient, options)
   } catch (error) {
     throw new LdapAuthenticationError(error.message || 'user search failed')
   } finally {
-    if (ldapAdminClient && ldapAdminClient.isConnected) {
+    if (ldapAdminClient) {
       await ldapAdminClient.unbind()
     }
   }
@@ -687,14 +629,17 @@ async function fetchUsers(options) {
  *
  * @param {AuthenticationOptions} options
  * @returns {Promise<any>} the user object if authentication succeeded.
- * @throws {LdapAuthenticationError} if authentication failed.
+ * @throws {LdapAuthenticationError} if authentication failed (its `code`
+ *   property then holds the corresponding AUTH_RESULT_* constant) or if
+ *   required options are missing.
  */
 async function authenticate(options) {
   const result = await authenticateResult(options)
 
   if (result.code !== AUTH_RESULT_SUCCESS) {
     throw new LdapAuthenticationError(
-      result.messages[result.messages.length - 1]
+      result.messages[result.messages.length - 1],
+      result.code
     )
   }
 
@@ -708,105 +653,21 @@ async function authenticate(options) {
  *
  * @param {AuthenticationOptions} options
  * @returns {Promise<AuthenticationResult>}
- * @throws {LdapAuthenticationError|Error} only on invalid options or network errors.
+ * @throws {LdapAuthenticationError} if required options are missing;
+ *   network errors from the LDAP server propagate as-is.
  */
 async function authenticateResult(options) {
-  if (!options.userDn) {
-    assert(options.adminDn, 'Admin mode adminDn must be provided')
-    assert(options.adminPassword, 'Admin mode adminPassword must be provided')
-    assert(options.userSearchBase, 'Admin mode userSearchBase must be provided')
-    assert(
-      options.usernameAttribute || options.usernameFilter,
-      'Admin mode usernameAttribute or usernameFilter must be provided'
-    )
-    assert(options.username, 'Admin mode username must be provided')
-  } else {
-    assert(options.userDn, 'User mode userDn must be provided')
-  }
-  assert(
-    options.ldapOpts && options.ldapOpts.url,
-    'ldapOpts.url must be provided'
-  )
+  _validateOptions(options)
 
   if (options.verifyUserExists) {
-    assert(options.adminDn, 'Admin mode adminDn must be provided')
-    assert(
-      options.adminPassword,
-      'adminDn and adminPassword must be both provided.'
-    )
-    return await verifyUserExists(
-      options.adminDn,
-      options.adminPassword,
-      options.userSearchBase,
-      options.usernameFilter,
-      options.usernameAttribute,
-      options.username,
-      options.starttls,
-      options.ldapOpts,
-      options.groupsSearchBase,
-      options.groupClass,
-      options.groupMemberAttribute,
-      options.groupMemberUserAttribute,
-      options.attributes,
-      options.explicitBufferAttributes
-    )
+    return await verifyUserExists(options)
   }
 
-  assert(options.userPassword, 'userPassword must be provided')
   if (options.adminDn) {
-    assert(
-      options.adminPassword,
-      'adminDn and adminPassword must be both provided.'
-    )
-    return await authenticateWithAdmin(
-      options.adminDn,
-      options.adminPassword,
-      options.userSearchBase,
-      options.usernameFilter,
-      options.usernameAttribute,
-      options.username,
-      options.userPassword,
-      options.starttls,
-      options.ldapOpts,
-      options.groupsSearchBase,
-      options.groupClass,
-      options.groupMemberAttribute,
-      options.groupMemberUserAttribute,
-      options.attributes,
-      options.explicitBufferAttributes
-    )
+    return await authenticateWithAdmin(options)
   }
 
-  assert(options.userDn, 'adminDn/adminPassword OR userDn must be provided')
-  return await authenticateWithUser(
-    options.userDn,
-    options.userSearchBase,
-    options.usernameFilter,
-    options.usernameAttribute,
-    options.username,
-    options.userPassword,
-    options.starttls,
-    options.ldapOpts,
-    options.groupsSearchBase,
-    options.groupClass,
-    options.groupMemberAttribute,
-    options.groupMemberUserAttribute,
-    options.attributes,
-    options.explicitBufferAttributes
-  )
-}
-
-/** Thrown by authenticate()/authenticateResult()/fetchUsers() on failure; `message` describes the failure. */
-class LdapAuthenticationError extends Error {
-  constructor(message) {
-    super(message)
-    // Ensure the name of this error is the same as the class name
-    this.name = this.constructor.name
-    // This clips the constructor invocation from the stack trace.
-    // It's not absolutely essential, but it does make the stack trace a little nicer.
-    //  @see Node.js reference (bottom)
-    Error.captureStackTrace(this, this.constructor)
-  }
+  return await authenticateWithUser(options)
 }
 
 module.exports.AUTH_RESULT_FAILURE = AUTH_RESULT_FAILURE

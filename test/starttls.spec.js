@@ -1,6 +1,5 @@
 const { authenticate, LdapAuthenticationError } = require('../index.js')
-
-const url = process.env.INGITHUB ? 'ldap://localhost:1389' : 'ldap://ldap:1389'
+const { url, adminDn, adminPassword, userSearchBase } = require('./config')
 
 describe('ldap-authentication StartTLS and TLS options test', () => {
   it('Plain LDAP with tlsOptions in ldapOpts should work (ldap:// protocol)', async () => {
@@ -38,10 +37,10 @@ describe('ldap-authentication StartTLS and TLS options test', () => {
         },
       },
       starttls: true,
-      adminDn: 'cn=read-only-admin,dc=example,dc=com',
-      adminPassword: 'password',
+      adminDn: adminDn,
+      adminPassword: adminPassword,
       userPassword: 'password',
-      userSearchBase: 'dc=example,dc=com',
+      userSearchBase: userSearchBase,
       usernameAttribute: 'uid',
       username: 'gauss',
     }
@@ -73,9 +72,10 @@ describe('ldap-authentication StartTLS and TLS options test', () => {
         },
       },
       starttls: true,
-      userDn: 'cn=einstein,ou=users,dc=example,dc=com',
-      userPassword: 'password',
-      userSearchBase: 'dc=example,dc=com',
+      adminDn: adminDn,
+      adminPassword: adminPassword,
+      verifyUserExists: true,
+      userSearchBase: userSearchBase,
       usernameAttribute: 'uid',
       username: 'einstein',
     }
@@ -103,10 +103,10 @@ describe('ldap-authentication StartTLS and TLS options test', () => {
         },
       },
       starttls: true,
-      adminDn: 'cn=read-only-admin,dc=example,dc=com',
-      adminPassword: 'password',
-      verifyUserExists: true,
-      userSearchBase: 'dc=example,dc=com',
+      adminDn: adminDn,
+      adminPassword: adminPassword,
+      userPassword: 'password',
+      userSearchBase: userSearchBase,
       usernameAttribute: 'uid',
       username: 'gauss',
     }

@@ -1,25 +1,25 @@
 const { fetchUsers, LdapAuthenticationError } = require('../index.js')
+const { url, adminDn, adminPassword, userSearchBase } = require('./config')
 
-const url = process.env.INGITHUB ? 'ldap://localhost:1389' : 'ldap://ldap:1389'
+const baseOptions = {
+  ldapOpts: {
+    url: url,
+  },
+  adminDn: adminDn,
+  adminPassword: adminPassword,
+  userSearchBase: userSearchBase,
+}
 
 describe('ldap-authentication fetchUsers test', () => {
-  const baseOptions = {
-    ldapOpts: {
-      url: url,
-    },
-    adminDn: 'cn=read-only-admin,dc=example,dc=com',
-    adminPassword: 'password',
-    userSearchBase: 'dc=example,dc=com',
-  }
-
   it('Should return all users with the default filter', async () => {
     let users = await fetchUsers(baseOptions)
 
     expect(Array.isArray(users)).toBe(true)
-    expect(users.length).toBe(2)
+    expect(users.length).toBe(3)
     let uids = users.map((user) => user.uid)
     expect(uids).toContain('gauss')
     expect(uids).toContain('einstein')
+    expect(uids).toContain('doe')
     for (let user of users) {
       expect(user.dn).toBeTruthy()
     }
@@ -31,7 +31,7 @@ describe('ldap-authentication fetchUsers test', () => {
       attributes: ['uid', 'sn'],
     })
 
-    expect(users.length).toBe(2)
+    expect(users.length).toBe(3)
     let gauss = users.find((user) => user.uid === 'gauss')
     expect(gauss).toBeTruthy()
     expect(gauss.sn).toEqual('Bar1')
@@ -55,7 +55,7 @@ describe('ldap-authentication fetchUsers test', () => {
       userFilter: '(objectClass=*)',
     })
 
-    expect(users.length).toBeGreaterThan(2)
+    expect(users.length).toBeGreaterThan(3)
     let dns = users.map((user) => user.dn)
     expect(dns).toContain('cn=gauss,ou=users,dc=example,dc=com')
     expect(dns).toContain('cn=科学A部,ou=groups,dc=example,dc=com')
@@ -72,15 +72,6 @@ describe('ldap-authentication fetchUsers test', () => {
 })
 
 describe('ldap-authentication fetchUsers negative test', () => {
-  const baseOptions = {
-    ldapOpts: {
-      url: url,
-    },
-    adminDn: 'cn=read-only-admin,dc=example,dc=com',
-    adminPassword: 'password',
-    userSearchBase: 'dc=example,dc=com',
-  }
-
   it('wrong admin password should throw LdapAuthenticationError', async () => {
     let options = {
       ...baseOptions,
@@ -115,22 +106,22 @@ describe('ldap-authentication fetchUsers negative test', () => {
     expect(e).toBeInstanceOf(LdapAuthenticationError)
   })
 
-  it('missing userSearchBase should throw', async () => {
-    let options = {
-      ldapOpts: {
-        url: url,
-      },
-      adminDn: 'cn=read-only-admin,dc=example,dc=com',
-      adminPassword: 'password',
-    }
-
+  it('missing required options should throw LdapAuthenticationError listing all of them', async () => {
     let e = null
     try {
-      await fetchUsers(options)
+      await fetchUsers({
+        ldapOpts: {
+          url: url,
+        },
+        adminDn: adminDn,
+      })
     } catch (error) {
       e = error
     }
 
     expect(e).toBeTruthy()
+    expect(e).toBeInstanceOf(LdapAuthenticationError)
+    expect(e.message).toContain('adminPassword')
+    expect(e.message).toContain('userSearchBase')
   })
 })

@@ -281,6 +281,13 @@ The user object if `authenticate()` is success.
 
 In version 4, a new function is added: `authenticateResult()`. It has the same call signature as `authenticate()` but returns an object `AuthenticationResult` with more details.
 
+`authenticate()` and `fetchUsers()` throw a `LdapAuthenticationError` on failure:
+- `authenticate()`: when the failure corresponds to a known outcome, the
+  error's `code` property holds the matching AUTH_RESULT_* constant (the same
+  value `authenticateResult()` reports).
+- Missing required options throw a `LdapAuthenticationError` too, with all
+  missing fields listed in the message in a single error.
+
 `fetchUsers()` returns an array of user objects, one per matched LDAP entry (each with its `dn` and the returned attributes), or an empty array if no user matches the filter.
 
 

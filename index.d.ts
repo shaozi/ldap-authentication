@@ -84,10 +84,16 @@ declare module 'ldap-authentication' {
   /**
    * Authenticate a user against the LDAP server. Kept as `Promise<any>` for
    * backward compatibility; the resolved value has the shape of
-   * {@link LdapUserEntry}. Throws {@link LdapAuthenticationError} on failure.
+   * {@link LdapUserEntry}. Throws {@link LdapAuthenticationError} on failure
+   * (the error's `code` then holds the corresponding AUTH_RESULT_* constant)
+   * or when required options are missing.
    */
   export function authenticate(options: AuthenticationOptions): Promise<any>
-  /** Same options as {@link authenticate} but never throws on failure; returns an {@link AuthenticationResult}. */
+  /**
+   * Same options as {@link authenticate} but never throws on failure; returns an
+   * {@link AuthenticationResult}. Throws {@link LdapAuthenticationError} when
+   * required options are missing.
+   */
   export function authenticateResult(options: AuthenticationOptions): Promise<AuthenticationResult>
 
   /**
@@ -99,8 +105,17 @@ declare module 'ldap-authentication' {
    */
   export function fetchUsers(options: FetchUsersOptions): Promise<LdapUserEntry[]>
 
+  /**
+   * Thrown by authenticate()/authenticateResult()/fetchUsers() on failure.
+   * `message` describes the failure. When the failure corresponds to a known
+   * authentication outcome, `code` holds the matching AUTH_RESULT_* constant
+   * (the same value authenticateResult() reports in `AuthenticationResult.code`).
+   * Missing required options also throw this error, with all missing fields
+   * listed in `message`.
+   */
   export class LdapAuthenticationError extends Error {
-    constructor(message: any)
+    constructor(message: any, code?: number)
     name: string
+    code?: number
   }
 }
