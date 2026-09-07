@@ -1,12 +1,16 @@
 var Jasmine = require('jasmine')
 var jasmine = new Jasmine()
 
+// jasmine 7: environment options (random, seed, stopSpecOnExpectationFailure)
+// are nested under the `env` key
 jasmine.loadConfig({
   spec_dir: 'test',
   spec_files: ['**/*[sS]pec.?(m)js'],
-  random: false,
-  seed: null,
-  stopSpecOnExpectationFailure: false,
+  env: {
+    random: false,
+    seed: null,
+    stopSpecOnExpectationFailure: false,
+  },
 })
 
 class MyConsoleReporter {
